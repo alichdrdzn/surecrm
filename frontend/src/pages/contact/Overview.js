@@ -7,8 +7,10 @@ import Addemail from '../../components/email/Addemail'
 
 // eslint-disable-next-line arrow-body-style
 import { useTranslation } from '../../i18n';
+import { useDateFmt } from '../../utils/dateFmt';
 const Overview = ({ data, setUserAction }) => {
   const { t } = useTranslation();
+  const { fd, fdt } = useDateFmt();
   const [open, setOpen] = useState(false)
 
   const handleOpen = () => setOpen(true)
@@ -31,7 +33,7 @@ const Overview = ({ data, setUserAction }) => {
                 <Typography variant="body1">{t('Date Of Birth :')}</Typography>
                 <Typography variant="body2" color={Palette.grey[600]}>
                   {
-                    data?.dateOfBirth ? dayjs(data?.dateOfBirth).format("DD/MM/YYYY") : "--"
+                    data?.dateOfBirth ? fd(data?.dateOfBirth) : "--"
                   }
                 </Typography>
               </Grid>

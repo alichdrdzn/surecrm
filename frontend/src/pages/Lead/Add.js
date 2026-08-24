@@ -17,6 +17,7 @@ import { apiget, apipost } from '../../service/api';
 import Palette from '../../theme/palette';
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../../components/jalali/JalaliDatePicker';
 const Add = (props) => {
   const { t } = useTranslation();
 
@@ -215,9 +216,8 @@ const Add = (props) => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={6}>
                   <FormLabel>{t('Date Of Birth')}</FormLabel>
-                  <TextField
+                  <JalaliDatePicker
                     name='dateOfBirth'
-                    type='date'
                     size='small'
                     fullWidth
                     value={formik.values.dateOfBirth}
@@ -621,10 +621,9 @@ const Add = (props) => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={6}>
                   <FormLabel>{t('Start Date')}</FormLabel>
-                  <TextField
+                  <JalaliDatePicker
                     id="startDate"
                     name="startDate"
-                    type='date'
                     size='small'
                     fullWidth
                     value={formik.values.startDate}
@@ -633,10 +632,9 @@ const Add = (props) => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={6}>
                   <FormLabel>{t('End Date')}</FormLabel>
-                  <TextField
+                  <JalaliDatePicker
                     id="endDate"
                     name="endDate"
-                    type='date'
                     size='small'
                     fullWidth
                     value={formik.values.endDate}
@@ -704,10 +702,10 @@ const Add = (props) => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={6}>
                   <FormLabel>{t('Conversion Date&Time')}</FormLabel>
-                  <TextField
+                  <JalaliDatePicker
                     id=""
                     name="conversionDateTime"
-                    type='datetime-local'
+                    showTime
                     size='small'
                     fullWidth
                     value={formik.values.conversionDateTime}

@@ -18,8 +18,9 @@ import AddMeeting from '../../components/meeting/Addmeetings'
 import AddCall from '../../components/call/Addcalls'
 
 import { useTranslation } from '../../i18n';
+import JalaliCalendar from '../../components/calendar/JalaliCalendar';
 const Calendar = () => {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
     const [userAction, setUserAction] = useState(null)
     const [data, setData] = useState([]);
     const [taskId, setTaskId] = useState('')
@@ -78,6 +79,7 @@ const Calendar = () => {
     const fetchApiTask = async () => {
         const result = await apiget(userRole === "admin" ? `task/list` : `task/list/?createdBy=${userid}`);
         return result.data.result.map(item => ({
+            _id: item._id,
             title: item.subject,
             start: item.startDate,
             end: item.endDate,
@@ -89,6 +91,7 @@ const Calendar = () => {
     const fetchApiMeeting = async () => {
         const result = await apiget(userRole === "admin" ? `meeting/list` : `meeting/list/?createdBy=${userid}`);
         return result.data.result.map(item => ({
+            _id: item._id,
             title: item.subject,
             start: item.startDate,
             end: item.endDate,
@@ -98,6 +101,7 @@ const Calendar = () => {
     const fetchApiCall = async () => {
         const result = await apiget(userRole === "admin" ? `call/list` : `call/list/?createdBy=${userid}`);
         return result.data.result.map(item => ({
+            _id: item._id,
             title: item.subject,
             start: item.startDateTime,
         }));
@@ -138,6 +142,16 @@ const Calendar = () => {
                         handleOpenCall={handleOpenCall}
                     />
                 </Stack>
+                {lang === 'fa' ? (
+                    <JalaliCalendar
+                        events={data}
+                        onEventClick={(ev) => {
+                            setTaskId(ev._id || ev.id);
+                            handleOpenViewEdit();
+                        }}
+                        onDateClick={handleOpenTask}
+                    />
+                ) : (
                 <FullCalendar
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                     initialView="dayGridMonth"
@@ -157,21 +171,22 @@ const Calendar = () => {
                     select={handleDateSelect}
                     eventContent={renderEventContent}
                     views={{
-                        listWeek: { buttonText: 'List' },
+                        listWeek: { buttonText: t('List') },
                         multiMonthFourMonth: {
                             type: 'multiMonth',
-                            buttonText: 'multiMonth',
+                            buttonText: t('multiMonth'),
                             duration: { months: 4 },
                         }
                     }}
                     buttonText={{
-                        today: 'Today',
-                        dayGridMonth: 'Month',
-                        timeGridWeek: 'Week',
-                        timeGridDay: 'Day',
+                        today: t('Today'),
+                        dayGridMonth: t('Month'),
+                        timeGridWeek: t('Week'),
+                        timeGridDay: t('Day'),
                     }}
                     eventClassNames="custom-fullcalendar"
                 />
+                )}
             </Container>
         </div>
     );

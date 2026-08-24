@@ -20,6 +20,7 @@ import dayjs from "dayjs";
 import { apiget, apipost } from "../../service/api";
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../jalali/JalaliDatePicker';
 const Addmeetings = (props) => {
   const { t } = useTranslation();
     const { open, handleClose, _id, setUserAction, data } = props
@@ -184,9 +185,9 @@ const Addmeetings = (props) => {
 
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('Start Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='startDate'
-                                        type={'datetime-local'}
+                                        showTime
                                         size='small'
                                         fullWidth
                                         value={dayjs(formik.values.startDate).format('YYYY-MM-DD HH:mm:ss')}
@@ -197,9 +198,9 @@ const Addmeetings = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('End Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='endDate'
-                                        type={'datetime-local'}
+                                        showTime
                                         size='small'
                                         fullWidth
                                         value={dayjs(formik.values.endDate).format('YYYY-MM-DD HH:mm:ss')}

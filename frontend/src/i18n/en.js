@@ -395,6 +395,12 @@ const fa = {
   'Lead Score :': 'Lead Score :',
   'Assigned Agent :': 'Assigned Agent :',
   'Phone :': 'Phone :',
+  'Today': 'Today',
+  'Month': 'Month',
+  'Week': 'Week',
+  'Day': 'Day',
+  'List': 'List',
+  'multiMonth': 'multiMonth',
 };
 
 export default fa;

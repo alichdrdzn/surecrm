@@ -4,9 +4,11 @@ import React from 'react'
 import moment from 'moment'
 import Palette from '../../theme/palette'
 import { useTranslation } from '../../i18n';
+import { useDateFmt } from '../../utils/dateFmt';
 
 const Other = ({ data }) => {
     const { t } = useTranslation();
+    const { fd, fdt } = useDateFmt();
     return (
     <div>
         <Card style={{borderTopLeftRadius:"0px",borderTopRightRadius:"0px"}}>
@@ -16,7 +18,7 @@ const Other = ({ data }) => {
                         <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} pb={2}>
                             <Typography variant="body1">{t('Create Date :')}</Typography>
                             <Typography variant="body2" color={Palette.grey[600]}>
-                                {moment(data?.createdOn).format('lll')}
+                                {fdt(data?.createdOn)}
                             </Typography>
                         </Grid>
                     </Grid>
@@ -24,7 +26,7 @@ const Other = ({ data }) => {
                         <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} pb={2}>
                             <Typography variant="body1">{t('Modified Date :')}</Typography>
                             <Typography variant="body2" color={Palette.grey[600]}>
-                                {moment(data?.modifiedOn).format('lll')}
+                                {fdt(data?.modifiedOn)}
                             </Typography>
                         </Grid>
                     </Grid>

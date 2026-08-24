@@ -19,6 +19,7 @@ import { apiget, apipost } from "../../service/api";
 
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../jalali/JalaliDatePicker';
 const AddEvent = ({ open, handleClose, setUserAction, _id }) => {
   const { t } = useTranslation();
 
@@ -332,9 +333,9 @@ const AddEvent = ({ open, handleClose, setUserAction, _id }) => {
 
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('Start Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='startDate'
-                                        type={'datetime-local'}
+                                        showTime
                                         size='small'
                                         fullWidth
                                         value={formik.values.startDate}
@@ -345,9 +346,9 @@ const AddEvent = ({ open, handleClose, setUserAction, _id }) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('End Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='endDate'
-                                        type={'datetime-local'}
+                                        showTime
                                         size='small'
                                         fullWidth
                                         value={formik.values.endDate}

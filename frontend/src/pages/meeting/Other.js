@@ -5,9 +5,11 @@ import { Link } from 'react-router-dom'
 import moment from 'moment'
 import Palette from '../../theme/palette'
 import { useTranslation } from '../../i18n';
+import { useDateFmt } from '../../utils/dateFmt';
 
 const Other = ({ data }) => {
     const { t } = useTranslation();
+    const { fd, fdt } = useDateFmt();
     return (
     <div>
         <Card style={{ borderTopLeftRadius: "0px", borderTopRightRadius: "0px" }}>
@@ -17,7 +19,7 @@ const Other = ({ data }) => {
                         <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} pb={2}>
                             <Typography variant="body1">{t('Create DateTime :')}</Typography>
                             <Typography variant="body2" color={Palette.grey[600]}>
-                                {moment(data?.createdOn).format('lll')}
+                                {fdt(data?.createdOn)}
                             </Typography>
                         </Grid>
                         <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} py={2}>
@@ -38,7 +40,7 @@ const Other = ({ data }) => {
                         <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} pb={2}>
                             <Typography variant="body1">{t('Modified DateTime :')}</Typography>
                             <Typography variant="body2" color={Palette.grey[600]}>
-                                {moment(data?.modifiedOn).format('lll')}
+                                {fdt(data?.modifiedOn)}
                             </Typography>
                         </Grid>
                     </Grid>

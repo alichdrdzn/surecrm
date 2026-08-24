@@ -20,6 +20,7 @@ import { useParams } from "react-router-dom";
 import { apiget, apiput } from "../../service/api";
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../jalali/JalaliDatePicker';
 const Editcalls = (props) => {
   const { t } = useTranslation();
     const { handleClose, open, id, fetchcalls } = props
@@ -198,11 +199,11 @@ const Editcalls = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6}>
                                     <FormLabel>{t('Start Date & Time')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         id="startDateTime"
                                         name="startDateTime"
                                         size="small"
-                                        type="datetime-local"
+                                        showTime
                                         fullWidth
                                         value={formik.values.startDateTime}
                                         onChange={formik.handleChange}

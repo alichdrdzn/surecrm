@@ -19,6 +19,7 @@ import { apiget, apipost } from '../../service/api';
 import Palette from '../../theme/palette';
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../../components/jalali/JalaliDatePicker';
 const Add = (props) => {
   const { t } = useTranslation();
     const { open, handleClose, setUserAction, _id } = props
@@ -179,9 +180,8 @@ const Add = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('Policy Start Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='policyStartDate'
-                                        type='date'
                                         size='small'
                                         fullWidth
                                         value={formik.values.policyStartDate}
@@ -192,9 +192,8 @@ const Add = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('Policy End Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='policyEndDate'
-                                        type='date'
                                         size='small'
                                         fullWidth
                                         value={formik.values.policyEndDate}
@@ -320,9 +319,8 @@ const Add = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('Date Of Birth')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='insuredPersonDateOfBirth'
-                                        type='date'
                                         size='small'
                                         fullWidth
                                         value={formik.values.insuredPersonDateOfBirth}
@@ -430,9 +428,8 @@ const Add = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={6}>
                                     <FormLabel>{t('Date Of Birth')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         name='additionalInsuredDateOfBirth'
-                                        type='date'
                                         size='small'
                                         fullWidth
                                         value={formik.values.additionalInsuredDateOfBirth}

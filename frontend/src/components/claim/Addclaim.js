@@ -19,6 +19,7 @@ import { apipost } from "src/service/api";
 import { toast } from "react-toastify";
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../jalali/JalaliDatePicker';
 const Addclaim = (props) => {
   const { t } = useTranslation();
     const { open, handleClose, _id, setUserAction } = props
@@ -151,11 +152,10 @@ const Addclaim = (props) => {
                                 </Grid>
                                 <Grid item xs={12} sm={6}>
                                     <FormLabel>{t('Claim Date')}</FormLabel>
-                                    <TextField
+                                    <JalaliDatePicker
                                         id="claimDate"
                                         name="claimDate"
                                         size="small"
-                                        type="date"
                                         fullWidth
                                         value={formik.values.claimDate}
                                         onChange={formik.handleChange}

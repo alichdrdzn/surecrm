@@ -23,6 +23,7 @@ import Palette from "../../theme/palette";
 
 
 import { useTranslation } from '../../i18n';
+import JalaliDatePicker from '../../components/jalali/JalaliDatePicker';
 const Edit = (props) => {
   const { t } = useTranslation();
 
@@ -192,9 +193,8 @@ const Edit = (props) => {
               </Grid>
               <Grid item xs={12} sm={6} md={6}>
                 <FormLabel>{t('Date Of Birth')}</FormLabel>
-                <TextField
+                <JalaliDatePicker
                   name='dateOfBirth'
-                  type='date'
                   size='small'
                   fullWidth
                   value={dayjs(formik.values.dateOfBirth).format('YYYY-MM-DD')}

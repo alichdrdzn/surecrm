@@ -7,7 +7,7 @@ import fa from './fa';
 
 const dictionaries = { en, fa };
 
-const LANG_KEY = 'app_lang';
+const LANG_KEY = 'app_lang_v2'; // rotated 2026-08-24: default language switched to Farsi
 
 export const LANGUAGES = [
   { value: 'en', label: 'English', flagIcon: '/assets/icons/ic_flag_en.svg' },
@@ -26,7 +26,7 @@ function getInitialLang() {
   } catch (e) {
     /* localStorage unavailable — fall through */
   }
-  return 'en';
+  return 'fa'; // Farsi is the product default
 }
 
 // ----------------------------------------------------------------------

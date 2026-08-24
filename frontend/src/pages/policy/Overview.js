@@ -7,8 +7,10 @@ import Palette from '../../theme/palette'
 
 // eslint-disable-next-line arrow-body-style
 import { useTranslation } from '../../i18n';
+import { useDateFmt } from '../../utils/dateFmt';
 const Overview = ({ data }) => {
   const { t } = useTranslation();
+  const { fd, fdt } = useDateFmt();
   return (
     <div>
       <Card style={{ borderTopLeftRadius: "0px", borderTopRightRadius: "0px" }}>
@@ -27,7 +29,7 @@ const Overview = ({ data }) => {
                 <Typography variant="body1">{t('Policy start date :')}</Typography>
                 <Typography variant="body2" color={Palette.grey[600]} >
                   {
-                    data?.policyStartDate ? dayjs(data?.policyStartDate).format("DD/MM/YYYY") : "--"
+                    data?.policyStartDate ? fd(data?.policyStartDate) : "--"
                   }
                 </Typography>
               </Grid>
@@ -41,7 +43,7 @@ const Overview = ({ data }) => {
                 <Typography variant="body1">{t('Policy end date :')}</Typography>
                 <Typography variant="body2" color={Palette.grey[600]} >
                   {
-                    data?.policyEndDate ? dayjs(data?.policyEndDate).format("DD/MM/YYYY") : "--"
+                    data?.policyEndDate ? fd(data?.policyEndDate) : "--"
                   }
                 </Typography>
               </Grid>

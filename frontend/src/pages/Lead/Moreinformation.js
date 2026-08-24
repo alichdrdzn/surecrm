@@ -7,8 +7,10 @@ import { Link } from 'react-router-dom'
 import Palette from '../../theme/palette'
 
 import { useTranslation } from '../../i18n';
+import { useDateFmt } from '../../utils/dateFmt';
 const Moreinformation = ({ data }) => {
   const { t } = useTranslation();
+  const { fd, fdt } = useDateFmt();
     // open instagram
     const handleInsta = (link) => {
         const url = `https://www.instagram.com/${link}`
@@ -140,7 +142,7 @@ const Moreinformation = ({ data }) => {
                             <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} py={2}>
                                 <Typography variant="body1">{t('Conversion Date & Time :')}</Typography>
                                 <Typography variant="body2" color={Palette.grey[600]}>
-                                    {data?.conversionDateTime ? moment(data?.conversionDateTime).format('lll') : "--"}
+                                    {data?.conversionDateTime ? fdt(data?.conversionDateTime) : "--"}
                                 </Typography>
                             </Grid>
                         </Grid>

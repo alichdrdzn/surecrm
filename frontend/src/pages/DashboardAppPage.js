@@ -86,15 +86,15 @@ export default function DashboardAppPage() {
 
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
-            <AppWidgetSummary title="Leads" total={totalLead} icon={'ic:baseline-leaderboard'} />
+            <AppWidgetSummary title={t('Leads')} total={totalLead} icon={'ic:baseline-leaderboard'} />
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <AppWidgetSummary title="Contacts" total={totalContact} color="info" icon={'fluent:book-contacts-24-filled'} />
+            <AppWidgetSummary title={t('Contacts')} total={totalContact} color="info" icon={'fluent:book-contacts-24-filled'} />
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <AppWidgetSummary title="Policies" total={totalPolicy} color="warning" icon={'ic:baseline-policy'} />
+            <AppWidgetSummary title={t('Policies')} total={totalPolicy} color="warning" icon={'ic:baseline-policy'} />
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
@@ -103,8 +103,8 @@ export default function DashboardAppPage() {
 
           <Grid item xs={12} md={6} lg={8}>
             <AppWebsiteVisits
-              title="Website Visits"
-              subheader="(+43%) than last year"
+              title={t('Website Visits')}
+              subheader={t('(+43%) than last year')}
               chartLabels={[
                 '01/01/2003',
                 '02/01/2003',
@@ -120,19 +120,19 @@ export default function DashboardAppPage() {
               ]}
               chartData={[
                 {
-                  name: 'Team A',
+                  name: t('Team A'),
                   type: 'column',
                   fill: 'solid',
                   data: [23, 11, 22, 27, 13, 22, 37, 21, 44, 22, 30],
                 },
                 {
-                  name: 'Team B',
+                  name: t('Team B'),
                   type: 'area',
                   fill: 'gradient',
                   data: [44, 55, 41, 67, 22, 43, 21, 41, 56, 27, 43],
                 },
                 {
-                  name: 'Team C',
+                  name: t('Team C'),
                   type: 'line',
                   fill: 'solid',
                   data: [30, 25, 36, 30, 45, 35, 64, 52, 59, 36, 39],
@@ -143,12 +143,12 @@ export default function DashboardAppPage() {
 
           <Grid item xs={12} md={6} lg={4}>
             <AppCurrentVisits
-              title="Current Visits"
+              title={t('Current Visits')}
               chartData={[
-                { label: 'America', value: 4344 },
-                { label: 'Asia', value: 5435 },
-                { label: 'Europe', value: 1443 },
-                { label: 'Africa', value: 4443 },
+                { label: t('America'), value: 4344 },
+                { label: t('Asia'), value: 5435 },
+                { label: t('Europe'), value: 1443 },
+                { label: t('Africa'), value: 4443 },
               ]}
               chartColors={[
                 theme.palette.primary.main,
@@ -161,19 +161,19 @@ export default function DashboardAppPage() {
 
           <Grid item xs={12} md={6} lg={8}>
             <AppConversionRates
-              title="Conversion Rates"
-              subheader="(+43%) than last year"
+              title={t('Conversion Rates')}
+              subheader={t('(+43%) than last year')}
               chartData={[
-                { label: 'Italy', value: 400 },
-                { label: 'Japan', value: 430 },
-                { label: 'China', value: 448 },
-                { label: 'Canada', value: 470 },
-                { label: 'France', value: 540 },
-                { label: 'Germany', value: 580 },
-                { label: 'South Korea', value: 690 },
-                { label: 'Netherlands', value: 1100 },
-                { label: 'United States', value: 1200 },
-                { label: 'United Kingdom', value: 1380 },
+                { label: t('Italy'), value: 400 },
+                { label: t('Japan'), value: 430 },
+                { label: t('China'), value: 448 },
+                { label: t('Canada'), value: 470 },
+                { label: t('France'), value: 540 },
+                { label: t('Germany'), value: 580 },
+                { label: t('South Korea'), value: 690 },
+                { label: t('Netherlands'), value: 1100 },
+                { label: t('United States'), value: 1200 },
+                { label: t('United Kingdom'), value: 1380 },
               ]}
             />
           </Grid>
@@ -181,11 +181,11 @@ export default function DashboardAppPage() {
           <Grid item xs={12} md={6} lg={4}>
             <AppCurrentSubject
               title={t('Current Subject')}
-              chartLabels={['English', 'History', 'Physics', 'Geography', 'Chinese', 'Math']}
+              chartLabels={[t('English'), t('History'), t('Physics'), t('Geography'), t('Chinese'), t('Math')]}
               chartData={[
-                { name: 'Series 1', data: [80, 50, 30, 40, 100, 20] },
-                { name: 'Series 2', data: [20, 30, 40, 80, 20, 80] },
-                { name: 'Series 3', data: [44, 76, 78, 13, 43, 10] },
+                { name: t('Series 1'), data: [80, 50, 30, 40, 100, 20] },
+                { name: t('Series 2'), data: [20, 30, 40, 80, 20, 80] },
+                { name: t('Series 3'), data: [44, 76, 78, 13, 43, 10] },
               ]}
               chartColors={[...Array(6)].map(() => theme.palette.text.secondary)}
             />
@@ -193,7 +193,7 @@ export default function DashboardAppPage() {
 
           <Grid item xs={12} md={6} lg={8}>
             <AppNewsUpdate
-              title="News Update"
+              title={t('News Update')}
               list={[...Array(5)].map((_, index) => ({
                 id: faker.datatype.uuid(),
                 title: faker.name.jobTitle(),
@@ -206,15 +206,15 @@ export default function DashboardAppPage() {
 
           <Grid item xs={12} md={6} lg={4}>
             <AppOrderTimeline
-              title="Order Timeline"
+              title={t('Order Timeline')}
               list={[...Array(5)].map((_, index) => ({
                 id: faker.datatype.uuid(),
                 title: [
-                  '1983, orders, $4220',
-                  '12 Invoices have been paid',
-                  'Order #37745 from September',
-                  'New order placed #XF-2356',
-                  'New order placed #XF-2346',
+                  t('1983, orders, $4220'),
+                  t('12 Invoices have been paid'),
+                  t('Order #37745 from September'),
+                  t('New order placed #XF-2356'),
+                  t('New order placed #XF-2346'),
                 ][index],
                 type: `order${index + 1}`,
                 time: faker.date.past(),
@@ -224,7 +224,7 @@ export default function DashboardAppPage() {
 
           <Grid item xs={12} md={6} lg={4}>
             <AppTrafficBySite
-              title="Traffic by Site"
+              title={t('Traffic by Site')}
               list={[
                 {
                   name: 'FaceBook',
@@ -254,11 +254,11 @@ export default function DashboardAppPage() {
             <AppTasks
               title={t('Tasks')}
               list={[
-                { id: '1', label: 'Create FireStone Logo' },
-                { id: '2', label: 'Add SCSS and JS files if required' },
-                { id: '3', label: 'Stakeholder Meeting' },
-                { id: '4', label: 'Scoping & Estimations' },
-                { id: '5', label: 'Sprint Showcase' },
+                { id: '1', label: t('Create FireStone Logo') },
+                { id: '2', label: t('Add SCSS and JS files if required') },
+                { id: '3', label: t('Stakeholder Meeting') },
+                { id: '4', label: t('Scoping & Estimations') },
+                { id: '5', label: t('Sprint Showcase') },
               ]}
             />
           </Grid>

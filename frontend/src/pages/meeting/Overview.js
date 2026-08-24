@@ -8,8 +8,10 @@ import Palette from '../../theme/palette'
 
 // eslint-disable-next-line arrow-body-style
 import { useTranslation } from '../../i18n';
+import { useDateFmt } from '../../utils/dateFmt';
 const Overview = ({ data }) => {
   const { t } = useTranslation();
+  const { fd, fdt } = useDateFmt();
   return (
     <div>
       <Card style={{borderTopLeftRadius:"0px",borderTopRightRadius:"0px"}}>
@@ -24,7 +26,7 @@ const Overview = ({ data }) => {
                 <Typography variant="body1">{t('Start Date :')}</Typography>
                 <Typography variant="body2" color={Palette.grey[600]}>
                   {
-                    data?.startDate ? moment(data?.startDate).format('lll') : "--"
+                    data?.startDate ? fdt(data?.startDate) : "--"
                   }
                 </Typography>
               </Grid>
@@ -47,7 +49,7 @@ const Overview = ({ data }) => {
                 <Typography variant="body1">{t('End Date :')}</Typography>
                 <Typography variant="body2" color={Palette.grey[600]}>
                   {
-                    data?.endDate ? moment(data?.endDate).format('lll') : "--"
+                    data?.endDate ? fdt(data?.endDate) : "--"
                   }
                 </Typography>
               </Grid>

@@ -26,6 +26,7 @@ import { fToNow } from '../../../utils/formatTime';
 // components
 import Iconify from '../../../components/iconify';
 import Scrollbar from '../../../components/scrollbar';
+import { formatJalaliDateTime } from '../../../utils/dateFmt';
 
 // ----------------------------------------------------------------------
 
@@ -126,14 +127,14 @@ export default function NotificationsPopover() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', py: 2, px: 2.5 }}>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle1">Notifications</Typography>
+            <Typography variant="subtitle1">{t('Notifications')}</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              You have {totalUnRead} unread messages
+              {t('You have')} {totalUnRead} {t('unread messages')}
             </Typography>
           </Box>
 
           {totalUnRead > 0 && (
-            <Tooltip title=" Mark all as read">
+            <Tooltip title={t('Mark all as read')}>
               <IconButton color="primary" onClick={handleMarkAllAsRead}>
                 <Iconify icon="eva:done-all-fill" />
               </IconButton>
@@ -158,9 +159,7 @@ export default function NotificationsPopover() {
           <List
             disablePadding
             subheader={
-              <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
-                Before that
-              </ListSubheader>
+              <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>{t('Before that')}</ListSubheader>
             }
           >
             {notifications.slice(2, 5).map((notification) => (
@@ -173,7 +172,7 @@ export default function NotificationsPopover() {
 
         <Box sx={{ p: 1 }}>
           <Button fullWidth disableRipple>
-            View All
+            {t('View All')}
           </Button>
         </Box>
       </Popover>
@@ -196,7 +195,8 @@ NotificationItem.propTypes = {
 };
 
 function NotificationItem({ notification }) {
-  const { avatar, title } = renderContent(notification);
+  const { t, lang } = useTranslation();
+  const { avatar, title } = renderContent(notification, t);
 
   return (
     <ListItemButton
@@ -225,7 +225,7 @@ function NotificationItem({ notification }) {
             }}
           >
             <Iconify icon="eva:clock-outline" sx={{ mr: 0.5, width: 16, height: 16 }} />
-            {fToNow(notification.createdAt)}
+            {lang === 'fa' ? formatJalaliDateTime(notification.createdAt) : fToNow(notification.createdAt)}
           </Typography>
         }
       />
@@ -235,12 +235,12 @@ function NotificationItem({ notification }) {
 
 // ----------------------------------------------------------------------
 
-function renderContent(notification) {
+function renderContent(notification, t) {
   const title = (
     <Typography variant="subtitle2">
-      {notification.title}
+      {t(notification.title)}
       <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
-        &nbsp; {noCase(notification.description)}
+        &nbsp; {noCase(t(notification.description))}
       </Typography>
     </Typography>
   );
