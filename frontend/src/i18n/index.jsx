@@ -11,7 +11,7 @@ const LANG_KEY = 'app_lang_v2'; // rotated 2026-08-24: default language switched
 
 export const LANGUAGES = [
   { value: 'en', label: 'English', flagIcon: '/assets/icons/ic_flag_en.svg' },
-  { value: 'fa', label: 'فارسی', flagIcon: '/assets/icons/ic_flag_de.svg' }, // de-flag svg reused as generic non-en marker
+  { value: 'fa', label: 'فارسی', flagIcon: '/assets/icons/ic_flag_ir.svg' }, // de-flag svg reused as generic non-en marker
 ];
 
 export const isRtlLang = (lang) => lang === 'fa';

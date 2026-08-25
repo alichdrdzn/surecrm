@@ -18,6 +18,11 @@ const Email = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: "User",
     },
+
+    // Delivery result of the actual SMTP send ("sent" | "failed" | "")
+    sendStatus: { type: String, default: "" },
+    sendError: { type: String, default: "" },
+
     deleted: {
         type: Boolean,
         default: false,

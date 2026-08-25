@@ -14,6 +14,7 @@ import PolicyRoute from "./policyRoutes.js"
 import DocumentRoute from './documentRoutes.js'
 import PolicyDocumentRoute from './policyDocumentRoutes.js'
 import emailTemmplateRoute from './emailTemplateRoutes.js'
+import FreepbxRoute from "./freepbxRoutes.js"
 
 router.use('/lead', LeadRoute);
 router.use('/contact', ContactRoute);
@@ -28,5 +29,6 @@ router.use('/policy', PolicyRoute)
 router.use('/document', DocumentRoute)
 router.use('/policydocument', PolicyDocumentRoute)
 router.use('/emailtemplate', emailTemmplateRoute)
+router.use('/freepbx', FreepbxRoute)
 
 export default router;

@@ -67,6 +67,21 @@ const navConfig = [
     path: '/dashboard/user',
     icon: icon('ic_user'),
   },
+  {
+    title: 'Live Calls',
+    path: '/dashboard/livecalls',
+    icon: icon('ic_call'),
+  },
+  {
+    title: 'Call Recordings',
+    path: '/dashboard/callrecordings',
+    icon: icon('ic_call'),
+  },
+  {
+    title: 'PBX Settings',
+    path: '/dashboard/freepbx',
+    icon: icon('ic_communication'),
+  },
 
   // {
   //   title: 'History',

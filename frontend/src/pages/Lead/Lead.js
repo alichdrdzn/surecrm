@@ -17,6 +17,7 @@ import { apiget, deleteManyApi } from '../../service/api';
 import DeleteModel from '../../components/Deletemodle'
 import TableStyle from '../../components/TableStyle'
 import EditModel from './Edit'
+import CallButton from '../../components/freepbx/CallButton';
 // ----------------------------------------------------------------------
 
 import { useTranslation } from '../../i18n';
@@ -125,7 +126,10 @@ const Lead = () => {
         return (
           <>
             <EditModel open={openEdit} handleClose={handleCloseEdit} id={id} fetchLead={fetchdata} />
-            <Button variant='text' size='small' color='primary' onClick={() => handleFirstNameClick(params?.row?._id)}><EditIcon /></Button>
+            <Stack direction="row">
+              <Button variant='text' size='small' color='primary' onClick={() => handleFirstNameClick(params?.row?._id)}><EditIcon /></Button>
+              <CallButton number={params?.row?.phoneNumber || ''} leadId={params?.row?._id} />
+            </Stack>
           </>
         );
       }

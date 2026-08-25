@@ -21,6 +21,12 @@ import { apiget, apiput } from "../../service/api";
 
 import { useTranslation } from '../../i18n';
 import JalaliDatePicker from '../jalali/JalaliDatePicker';
+
+const DIRECTIONS = ["Outbound", "Inbound"];
+const STATUSES = ["Answered", "Missed", "No Answer", "Busy", "Failed"];
+// hh:mm:ss (or m:ss)
+const DURATION_REGEX = /^\d{1,2}:[0-5]\d(:[0-5]\d)?$/;
+
 const Editcalls = (props) => {
   const { t } = useTranslation();
     const { handleClose, open, id, fetchcalls } = props
@@ -36,17 +42,28 @@ const Editcalls = (props) => {
 
     // -----------  validationSchema
     const validationSchema = yup.object({
-        subject: yup.string().required("Subject is required"),
-        status: yup.string().required("Status is required"),
+        direction: yup.string().oneOf(DIRECTIONS).required("Direction is required"),
+        phoneNumber: yup.string().matches(/^[0-9*#+()\s-]*$/, "Invalid phone number"),
+        status: yup.string().oneOf(STATUSES.concat(["Planned", "Held", "Not Held"])).required("Status is required"),
         startDateTime: yup.string().required("Start Date & Time is required"),
-        duration: yup.string().required("Duration is required"),
-        relatedTo: yup.string().required("Related To is required"),
-        note: yup.string().required("Note is required"),
+        duration: yup
+            .string()
+            .matches(DURATION_REGEX, "Duration must look like 00:05:30")
+            .required("Duration is required"),
+        relatedTo: yup.string(),
+        note: yup.string(),
     });
+
+    // legacy rows may only carry the direction inside their subject
+    const initialDirection =
+        callDetails.direction ||
+        (/^inbound/i.test(callDetails.subject || "") ? "Inbound" : "Outbound");
 
     // -----------   initialValues
     const initialValues = {
         subject: callDetails.subject,
+        direction: initialDirection,
+        phoneNumber: callDetails.phoneNumber || "",
         status: callDetails.status,
         startDateTime: callDetails.startDateTime,
         duration: callDetails.duration,
@@ -99,6 +116,8 @@ const Editcalls = (props) => {
         onSubmit: async (values) => {
             const callData = {
                 subject: values.subject,
+                direction: values.direction,
+                phoneNumber: values.phoneNumber,
                 status: values.status,
                 startDateTime: values.startDateTime,
                 duration: values.duration,
@@ -155,20 +174,46 @@ const Editcalls = (props) => {
                                 columnSpacing={{ xs: 0, sm: 5, md: 4 }}
                             >
                                 <Grid item xs={12} sm={6} md={6}>
-                                    <FormLabel>{t('Subject')}</FormLabel>
+                                    <FormControl fullWidth>
+                                        <FormLabel>{t('Direction')}</FormLabel>
+                                        <Select
+                                            labelId="demo-simple-select-label"
+                                            id="direction"
+                                            name="direction"
+                                            size="small"
+                                            value={formik.values.direction}
+                                            onChange={formik.handleChange}
+                                            error={formik.touched.direction && Boolean(formik.errors.direction)}
+                                        >
+                                            {DIRECTIONS.map((d) => (
+                                                <MenuItem key={d} value={d}>{t(d)}</MenuItem>
+                                            ))}
+                                        </Select>
+                                        <FormHelperText
+                                            error={
+                                                formik.touched.direction && Boolean(formik.errors.direction)
+                                            }
+                                        >
+                                            {formik.touched.direction && formik.errors.direction}
+                                        </FormHelperText>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={6}>
+                                    <FormLabel>{t('Phone Number')}</FormLabel>
                                     <TextField
-                                        id="subject"
-                                        name="subject"
+                                        id="phoneNumber"
+                                        name="phoneNumber"
                                         size="small"
                                         fullWidth
-                                        value={formik.values.subject}
+                                        placeholder="09121234567"
+                                        value={formik.values.phoneNumber}
                                         onChange={formik.handleChange}
                                         error={
-                                            formik.touched.subject &&
-                                            Boolean(formik.errors.subject)
+                                            formik.touched.phoneNumber &&
+                                            Boolean(formik.errors.phoneNumber)
                                         }
                                         helperText={
-                                            formik.touched.subject && formik.errors.subject
+                                            formik.touched.phoneNumber && formik.errors.phoneNumber
                                         }
                                     />
                                 </Grid>
@@ -187,6 +232,11 @@ const Editcalls = (props) => {
                                             <MenuItem value="Planned">{t('Planned')}</MenuItem>
                                             <MenuItem value="Held">{t('Held')}</MenuItem>
                                             <MenuItem value="Not Held">{t('Not Held')}</MenuItem>
+                                            <MenuItem value="Answered">{t('Answered')}</MenuItem>
+                                            <MenuItem value="Missed">{t('Missed')}</MenuItem>
+                                            <MenuItem value="No Answer">{t('No Answer')}</MenuItem>
+                                            <MenuItem value="Busy">{t('Busy')}</MenuItem>
+                                            <MenuItem value="Failed">{t('Failed')}</MenuItem>
                                         </Select>
                                         <FormHelperText
                                             error={
@@ -217,33 +267,24 @@ const Editcalls = (props) => {
                                     />
                                 </Grid>
                                 <Grid item xs={12} sm={6}>
-                                    <FormControl fullWidth>
-                                        <FormLabel>{t('Duration')}</FormLabel>
-                                        <Select
-                                            labelId="demo-simple-select-label"
-                                            id="duration"
-                                            name="duration"
-                                            size="small"
-                                            value={formik.values.duration}
-                                            onChange={formik.handleChange}
-                                            error={formik.touched.duration && Boolean(formik.errors.duration)}
-                                        >
-                                            <MenuItem value="15 minutes">15 minutes</MenuItem>
-                                            <MenuItem value="30 minutes">30 minutes</MenuItem>
-                                            <MenuItem value="45 minutes">45 minutes</MenuItem>
-                                            <MenuItem value="1 hour">1 hour</MenuItem>
-                                            <MenuItem value="1.5 hours">1.5 hours</MenuItem>
-                                            <MenuItem value="2 hours">2 hours</MenuItem>
-                                            <MenuItem value="3 hours">3 hours</MenuItem>
-                                        </Select>
-                                        <FormHelperText
-                                            error={
-                                                formik.touched.duration && Boolean(formik.errors.duration)
-                                            }
-                                        >
-                                            {formik.touched.duration && formik.errors.duration}
-                                        </FormHelperText>
-                                    </FormControl>
+                                    <FormLabel>{t('Duration')}</FormLabel>
+                                    <TextField
+                                        id="duration"
+                                        name="duration"
+                                        size="small"
+                                        fullWidth
+                                        placeholder="00:05:30"
+                                        value={formik.values.duration}
+                                        onChange={formik.handleChange}
+                                        error={
+                                            formik.touched.duration && Boolean(formik.errors.duration)
+                                        }
+                                        helperText={
+                                            formik.touched.duration
+                                                ? formik.errors.duration || "hh:mm:ss"
+                                                : "hh:mm:ss"
+                                        }
+                                    />
                                 </Grid>
                                 <Grid item xs={12} sm={6}>
                                     <FormControl fullWidth>

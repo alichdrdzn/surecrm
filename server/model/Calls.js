@@ -20,6 +20,14 @@ const Calls = new mongoose.Schema({
         ref: "User",
     },
 
+    // ---- FreePBX integration metadata (optional, auto-logged calls) ----
+    source: { type: String, default: "" },       // "" manual | "freepbx"
+    direction: { type: String, default: "" },    // "Inbound" | "Outbound" ("" for legacy/manual rows)
+    phoneNumber: { type: String, default: "" },  // external party of the call
+    pbxUniqueId: { type: String, default: "" },  // Asterisk Uniqueid
+    pbxChannel: { type: String, default: "" },   // Asterisk channel name
+    recordingUrl: { type: String, default: "" }, // playback URL of the call recording
+
     deleted: {
         type: Boolean,
         default: false,

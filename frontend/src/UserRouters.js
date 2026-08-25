@@ -16,6 +16,7 @@ import Calendar from './pages/Calendar/Calendar';
 import Document from './pages/documents/Documents';
 import Calls from './pages/calls/Call';
 import CallsView from './pages/calls/View'
+import LiveCalls from './pages/freepbx/LiveCalls';
 import Meeting from './pages/meeting/Meeting';
 import MeetingView from './pages/meeting/View'
 import Email from './pages/email/Email'
@@ -47,6 +48,7 @@ export default function Router() {
 
         { path: 'call', element: <Calls /> },
         { path: 'call/view/:id', element: <CallsView /> },
+        { path: 'livecalls', element: <LiveCalls /> },
         { path: 'meeting', element: <Meeting /> },
         { path: 'meeting/view/:id', element: <MeetingView /> },
         { path: 'email', element: <Email /> },

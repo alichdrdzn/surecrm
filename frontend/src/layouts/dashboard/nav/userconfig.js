@@ -13,6 +13,11 @@ const UserConfig = [
     icon: icon('ic_analytics'),
   },
   {
+    title: 'Live Calls',
+    path: '/dashboard/livecalls',
+    icon: icon('ic_call'),
+  },
+  {
     title: 'Lead Management',
     path: '/dashboard/lead',
     icon: icon('ic_lead'),

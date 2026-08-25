@@ -35,6 +35,7 @@ const Add = (props) => {
     lastName: "",
     emailAddress: "",
     password: "",
+    extension: "",
   };
 
   // add user api

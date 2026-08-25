@@ -16,6 +16,7 @@ import DeleteModel from '../../components/Deletemodle'
 import { apiget, deleteManyApi } from '../../service/api';
 import TableStyle from '../../components/TableStyle';
 import Iconify from '../../components/iconify/Iconify';
+import AddEmail from '../../components/email/Addemail';
 import { useTranslation } from '../../i18n';
 // ----------------------------------------------------------------------
 
@@ -44,10 +45,13 @@ function CustomToolbar({ selectedRowIds, fetchdata }) {
 
 const Email = () => {
   const { t } = useTranslation();
-    // eslint-disable-next-line no-unused-vars
     const [userAction, setUserAction] = useState(null);
     const [emailList, setEmailList] = useState([]);
     const [selectedRowIds, setSelectedRowIds] = useState([]);
+    // New Email modal
+    const [openEmail, setOpenEmail] = useState(false);
+    const handleOpenEmail = () => setOpenEmail(true);
+    const handleCloseEmail = () => setOpenEmail(false);
 
     const navigate = useNavigate()
 
@@ -116,11 +120,14 @@ const Email = () => {
     }, [userAction])
     return (
         <>
+            {/* New Email modal */}
+            <AddEmail open={openEmail} handleClose={handleCloseEmail} setUserAction={setUserAction} />
+
             <Container>
                 <TableStyle>
                     <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
                         <Typography variant="h4">{t('Emails List')}</Typography>
-                        <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} >{t('New Email')}</Button>
+                        <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenEmail}>{t('New Email')}</Button>
                     </Stack>
                     <Box width="100%">
                         <Card style={{ height: "600px", paddingTop: "15px" }}>

@@ -40,6 +40,7 @@ const Edit = (props) => {
         firstName: userDetails?.firstName,
         lastName: userDetails?.lastName,
         emailAddress: userDetails?.emailAddress,
+        extension: userDetails?.extension || "",
         modifiedOn: ""
     };
 
@@ -70,6 +71,7 @@ const Edit = (props) => {
                 firstName: values.firstName,
                 lastName: values.lastName,
                 emailAddress: values.emailAddress,
+                extension: values.extension,
                 modifiedOn: new Date()
             }
             EditUser(userData)
@@ -143,6 +145,18 @@ const Edit = (props) => {
                                     helperText={
                                         formik.touched.lastName && formik.errors.lastName
                                     }
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={12} md={12}>
+                                <FormLabel>{t('Extension')}</FormLabel>
+                                <TextField
+                                    id="extension"
+                                    name="extension"
+                                    size="small"
+                                    placeholder="1001"
+                                    value={formik.values.extension}
+                                    onChange={formik.handleChange}
+                                    fullWidth
                                 />
                             </Grid>
                             <Grid item xs={12} sm={12} md={12}>

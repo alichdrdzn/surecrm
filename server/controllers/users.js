@@ -23,6 +23,7 @@ const edit = async (req, res) => {
                     firstName: req.body.firstName,
                     lastName: req.body.lastName,
                     emailAddress: req.body.emailAddress,
+                    extension: typeof req.body.extension === 'string' ? req.body.extension.trim() : '',
                     modifiedOn: req.body.modifiedOn
                 }
             },

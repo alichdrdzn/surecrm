@@ -25,6 +25,10 @@ import TaskView from './pages/task/View'
 import EmailTemplate from './pages/emailTemplate/EmailTemplate';
 import AddEmailTemplate from './pages/emailTemplate/Add'
 import ViewEmailTemplate from './pages/emailTemplate/View'
+import FreePbx from './pages/freepbx/FreePbx';
+import LiveCalls from './pages/freepbx/LiveCalls';
+import Recordings from './pages/calls/Recordings';
+
 // ----------------------------------------------------------------------
 
 export default function Router() {
@@ -57,6 +61,9 @@ export default function Router() {
         { path: 'emailtemplate', element: <EmailTemplate /> },
         { path: 'emailtemplate/add', element: <AddEmailTemplate /> },
         { path: 'emailtemplate/view/:id', element: <ViewEmailTemplate /> },
+        { path: 'freepbx', element: <FreePbx /> },
+        { path: 'livecalls', element: <LiveCalls /> },
+        { path: 'callrecordings', element: <Recordings /> },
         // { path: 'history', element: <History /> },
         
         // { path: '*', element: <Navigate to="/dashboard/app" /> },

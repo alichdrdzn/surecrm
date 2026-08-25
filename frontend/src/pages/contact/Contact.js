@@ -24,6 +24,7 @@ import TableStyle from '../../components/TableStyle';
 import { apiget, deleteManyApi } from '../../service/api';
 import DeleteModel from '../../components/Deletemodle'
 import EditContact from './Edit'
+import CallButton from '../../components/freepbx/CallButton';
 
 // ----------------------------------------------------------------------
 
@@ -136,6 +137,7 @@ const Contact = () => {
                         <EditContact open={openEdit} handleClose={handleCloseEdit} id={id} fetchContact={fetchdata} />
                         <Stack direction={"row"} spacing={2}>
                             <Button variant='text' size='small' color='primary' onClick={() => handleFirstNameClick(params.row._id)}><EditIcon /></Button>
+                            <CallButton number={params?.row?.phoneNumber || ''} contactId={params?.row?._id} />
                         </Stack>
                     </Box>
                 );

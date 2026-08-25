@@ -18,6 +18,7 @@ import { toast } from "react-toastify";
 import { FormLabel } from "@mui/material";
 
 import { useTranslation } from '../../i18n';
+
 const Addemail = (props) => {
   const { t } = useTranslation();
     const { open, handleClose, _id, setUserAction, receiver } = props
@@ -33,9 +34,9 @@ const Addemail = (props) => {
 
     // -----------   initialValues
     const initialValues = {
-        sender: user?.emailAddress,
+        sender: user?.emailAddress || "",
         subject: "",
-        receiver: receiver?.emailAddress,
+        receiver: receiver?.emailAddress || "",
         message: "",
         lead_id: _id,
         contact_id: _id,

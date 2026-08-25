@@ -2,11 +2,13 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from 'react';
 // @mui
-import { Card, Button, Box, Container, Stack, Typography } from '@mui/material';
+import { Card, Button, Box, Container, Stack, Typography, Chip } from '@mui/material';
 // components
 import { useNavigate } from 'react-router-dom';
 import { DataGrid, GridToolbar, GridToolbarContainer } from '@mui/x-data-grid';
 import { DeleteOutline } from '@mui/icons-material';
+import CallReceivedIcon from '@mui/icons-material/CallReceived';
+import CallMadeIcon from '@mui/icons-material/CallMade';
 // sections
 // mock
 import { apiget, deleteManyApi } from '../../service/api';
@@ -14,10 +16,12 @@ import DeleteModel from '../../components/Deletemodle'
 import TableStyle from '../../components/TableStyle';
 import Iconify from '../../components/iconify/Iconify';
 import AddCall from '../../components/call/Addcalls'
+import Dialpad from '../../components/freepbx/Dialpad';
 
 // ----------------------------------------------------------------------
 import { useTranslation } from '../../i18n';
-const CustomToolbar = ({ selectedRowIds, fetchdata }) => {
+
+const CustomToolbar = ({ selectedRowIds, fetchdata, onDial }) => {
   const { t } = useTranslation();
   const [opendelete, setOpendelete] = useState(false);
 
@@ -34,17 +38,27 @@ const CustomToolbar = ({ selectedRowIds, fetchdata }) => {
   return (
     <GridToolbarContainer>
       <GridToolbar />
+      <Button variant="text" sx={{ textTransform: 'capitalize' }} onClick={onDial}>{t('Dial')}</Button>
       {selectedRowIds && selectedRowIds.length > 0 && <Button variant="text" sx={{ textTransform: 'capitalize' }} startIcon={<DeleteOutline />} onClick={handleOpenDelete}>{t('Delete')}</Button>}
       <DeleteModel opendelete={opendelete} handleClosedelete={handleCloseDelete} deletedata={deleteManyCalls} id={selectedRowIds} />
     </GridToolbarContainer>
   );
 }
 
-const Call = () => {
+/** Direction of a call row; falls back to the subject for legacy records. */
+export const directionOfCall = (row) => {
+  if (row.direction) return row.direction;
+  if (/^inbound/i.test(row.subject || '')) return 'Inbound';
+  if (/^outbound/i.test(row.subject || '')) return 'Outbound';
+  return '';
+};
+
+  const Call = () => {
   const { t } = useTranslation();
   const [allCall, setAllCall] = useState([]);
   const [selectedRowIds, setSelectedRowIds] = useState([]);
   const [openCall, setOpenCall] = useState(false);
+  const [openDial, setOpenDial] = useState(false);
   const [userAction, setUserAction] = useState(null)
   const navigate = useNavigate()
 
@@ -89,6 +103,45 @@ const Call = () => {
 
     { field: "duration", headerName: t('Duration'), headerAlign: "left", align: "left", flex: 1 },
     { field: "status", headerName: t('Status'), headerAlign: "left", align: "left", flex: 1 },
+    {
+      field: "direction",
+      headerName: t('Direction'),
+      flex: 1,
+      renderCell: (params) => {
+        const dir = directionOfCall(params.row);
+        if (!dir) return <Typography variant="body2">-</Typography>;
+        return (
+          <Chip
+            size="small"
+            variant="outlined"
+            color={dir === 'Inbound' ? 'secondary' : 'primary'}
+            icon={dir === 'Inbound' ? <CallReceivedIcon fontSize="small" /> : <CallMadeIcon fontSize="small" />}
+            label={t(dir)}
+          />
+        );
+      }
+    },
+    {
+      field: "phoneNumber",
+      headerName: t('Phone Number'),
+      headerAlign: "left",
+      align: "left",
+      flex: 1,
+      renderCell: (params) => params?.value || '-',
+    },
+    {
+      field: "source",
+      headerName: t('Source'),
+      flex: 1,
+      renderCell: (params) => (
+        <Chip
+          size="small"
+          variant="outlined"
+          color={params.row.source === 'freepbx' ? 'primary' : 'default'}
+          label={params.row.source === 'freepbx' ? t('FreePBX') : t('Manual')}
+        />
+      )
+    },
     {
       field: allCall.relatedTo === "Lead" ? "lead_id" : "contact_id",
       headerName: t('Related To'),
@@ -139,6 +192,9 @@ const Call = () => {
       {/* Add Calls */}
       <AddCall open={openCall} handleClose={handleCloseCall} setUserAction={setUserAction} />
 
+      {/* Click-to-call dialpad */}
+      <Dialpad open={openDial} handleClose={() => setOpenDial(false)} />
+
       <Container>
         <TableStyle>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
@@ -150,7 +206,7 @@ const Call = () => {
               <DataGrid
                 rows={allCall}
                 columns={columns}
-                components={{ Toolbar: () => CustomToolbar({ selectedRowIds, fetchdata }) }}
+                components={{ Toolbar: () => CustomToolbar({ selectedRowIds, fetchdata, onDial: () => setOpenDial(true) }) }}
                 checkboxSelection
                 onRowSelectionModelChange={handleSelectionChange}
                 rowSelectionModel={selectedRowIds}

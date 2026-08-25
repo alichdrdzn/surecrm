@@ -3,9 +3,11 @@ import PropTypes from 'prop-types';
 import { styled } from '@mui/material/styles';
 import { Box, Stack, AppBar, Toolbar, IconButton } from '@mui/material';
 // utils
+import { useState } from 'react';
 import { bgBlur } from '../../../utils/cssStyles';
 // components
 import Iconify from '../../../components/iconify';
+import Dialpad from '../../../components/freepbx/Dialpad';
 //
 import Searchbar from './Searchbar';
 import AccountPopover from './AccountPopover';
@@ -43,6 +45,8 @@ Header.propTypes = {
 };
 
 export default function Header({ onOpenNav }) {
+  const [openDialpad, setOpenDialpad] = useState(false);
+
   return (
     <StyledRoot>
       <StyledToolbar>
@@ -55,6 +59,18 @@ export default function Header({ onOpenNav }) {
           }}
         >
           <Iconify icon="eva:menu-2-fill" />
+        </IconButton>
+
+        {/* Click-to-call dialpad (FreePBX integration) */}
+        <IconButton
+          onClick={() => setOpenDialpad(true)}
+          title="Dial"
+          sx={{
+            mr: 1,
+            color: 'primary.main',
+          }}
+        >
+          <Iconify icon="eva:phone-call-fill" />
         </IconButton>
 
         <Searchbar />
@@ -73,6 +89,8 @@ export default function Header({ onOpenNav }) {
           <AccountPopover />
         </Stack>
       </StyledToolbar>
+
+      <Dialpad open={openDialpad} handleClose={() => setOpenDialpad(false)} />
     </StyledRoot>
   );
 }

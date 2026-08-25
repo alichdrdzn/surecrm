@@ -22,10 +22,19 @@ const add = async (req, res) => {
     try {
 
         const emails = new Emails(req.body);
-        // SendMail(emails.receiver, emails.subject, emails.message)
+        // Actually deliver the mail through the configured SMTP server.
+        const result = await SendMail(emails.receiver, emails.subject, emails.message);
+
+        emails.sendStatus = result.ok ? 'sent' : 'failed';
+        emails.sendError = result.ok ? '' : result.error;
 
         await emails.save();
-        res.status(201).json({ emails, message: 'Email saved successfully' });
+        res.status(201).json({
+            emails,
+            message: result.ok
+                ? 'Email sent successfully'
+                : `Email saved, but sending failed: ${result.error}`,
+        });
     } catch (err) {
         console.error('Failed to create Email:', err);
         res.status(500).json({ error: 'Failed to create Email' });
