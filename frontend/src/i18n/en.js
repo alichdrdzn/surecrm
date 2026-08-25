@@ -43,6 +43,7 @@ const fa = {
   'Call': 'Call',
   'No phone number': 'No phone number',
   'Failed to place call': 'Failed to place call',
+  'Failed to save settings': 'Failed to save settings',
   'Integration Enabled': 'Integration Enabled',
   'AMI Host': 'AMI Host',
   'AMI Port': 'AMI Port',
@@ -465,6 +466,12 @@ const fa = {
   'Close': 'Close',
   'Recording URL Pattern': 'Recording URL Pattern',
   'Placeholders': 'Placeholders',
+
+  // Click-to-call redesign
+  'Contact List': 'Contact List',
+  'Place Call': 'Place Call',
+  'Search contacts': 'Search contacts',
+  'No contacts found': 'No contacts found',
 };
 
 export default fa;

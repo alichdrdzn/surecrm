@@ -2,7 +2,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from 'react';
 // @mui
-import { Card, Button, Box, Container, Stack, Typography, Chip } from '@mui/material';
+import { Card, Button, Box, Container, Stack, Typography, Chip, Menu, MenuItem, ListItemIcon } from '@mui/material';
 // components
 import { useNavigate } from 'react-router-dom';
 import { DataGrid, GridToolbar, GridToolbarContainer } from '@mui/x-data-grid';
@@ -15,8 +15,8 @@ import { apiget, deleteManyApi } from '../../service/api';
 import DeleteModel from '../../components/Deletemodle'
 import TableStyle from '../../components/TableStyle';
 import Iconify from '../../components/iconify/Iconify';
-import AddCall from '../../components/call/Addcalls'
 import Dialpad from '../../components/freepbx/Dialpad';
+import ContactPicker from '../../components/freepbx/ContactPicker';
 
 // ----------------------------------------------------------------------
 import { useTranslation } from '../../i18n';
@@ -57,14 +57,11 @@ export const directionOfCall = (row) => {
   const { t } = useTranslation();
   const [allCall, setAllCall] = useState([]);
   const [selectedRowIds, setSelectedRowIds] = useState([]);
-  const [openCall, setOpenCall] = useState(false);
   const [openDial, setOpenDial] = useState(false);
+  const [openContacts, setOpenContacts] = useState(false);
+  const [newMenuAnchor, setNewMenuAnchor] = useState(null);
   const [userAction, setUserAction] = useState(null)
   const navigate = useNavigate()
-
-  // open call model
-  const handleOpenCall = () => setOpenCall(true);
-  const handleCloseCall = () => setOpenCall(false);
 
   const userid = localStorage.getItem('user_id');
   const userRole = localStorage.getItem("userRole")
@@ -143,18 +140,23 @@ export const directionOfCall = (row) => {
       )
     },
     {
-      field: allCall.relatedTo === "Lead" ? "lead_id" : "contact_id",
+      field: "relatedTo",
       headerName: t('Related To'),
       cellClassName: "name-column--cell name-column--cell--capitalize",
       flex: 1,
       renderCell: (params) => {
+        const row = params?.row || {};
+        const lead = row.relatedTo === "Lead" ? row.lead_id : null;
+        const contact = row.relatedTo === "Contact" ? row.contact_id : null;
+        const target = lead || contact;
+        // Unlinked calls (e.g. FreePBX auto-logs with relatedTo 'None') show a dash
+        if (!target || (target.firstName == null && target.lastName == null)) return '-';
         const handleFirstNameClick = () => {
-          navigate(params?.row?.relatedTo === "Lead" ? `/dashboard/lead/view/${params?.row?.lead_id?._id}` : `/dashboard/contact/view/${params?.row?.contact_id?._id}`)
+          navigate(lead ? `/dashboard/lead/view/${lead._id}` : `/dashboard/contact/view/${contact._id}`)
         };
         return (
           <Box onClick={handleFirstNameClick}>
-            {params?.row?.relatedTo === "Lead" ? `${params?.row?.lead_id?.firstName} ${params?.row?.lead_id?.lastName}` : `${params?.row?.contact_id?.firstName} ${params?.row?.contact_id?.lastName}`
-            }
+            {`${target.firstName || ''} ${target.lastName || ''}`.trim()}
           </Box>
         );
       }
@@ -165,12 +167,15 @@ export const directionOfCall = (row) => {
       cellClassName: "name-column--cell name-column--cell--capitalize",
       flex: 1,
       renderCell: (params) => {
+        const user = params?.row?.createdBy;
+        // FreePBX auto-logged calls have no assigned user - never dereference blindly
+        if (!user) return '-';
         const handleFirstNameClick = () => {
-          navigate(`/dashboard/user/view/${params?.row?.createdBy?._id}`)
+          navigate(`/dashboard/user/view/${user._id}`)
         };
         return (
           <Box onClick={handleFirstNameClick}>
-            {`${params.row.createdBy.firstName} ${params.row.createdBy.lastName}`}
+            {`${user.firstName} ${user.lastName}`}
           </Box>
         );
       }
@@ -189,17 +194,27 @@ export const directionOfCall = (row) => {
 
   return (
     <>
-      {/* Add Calls */}
-      <AddCall open={openCall} handleClose={handleCloseCall} setUserAction={setUserAction} />
-
       {/* Click-to-call dialpad */}
-      <Dialpad open={openDial} handleClose={() => setOpenDial(false)} />
+      <Dialpad open={openDial} handleClose={() => { setOpenDial(false); setUserAction({}); }} />
+
+      {/* Click-to-call contact picker */}
+      <ContactPicker open={openContacts} handleClose={() => { setOpenContacts(false); setUserAction({}); }} />
 
       <Container>
         <TableStyle>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4">{t('Calls List')}</Typography>
-            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenCall}>{t('New Call')}</Button>
+            <>
+              <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={(e) => setNewMenuAnchor(e.currentTarget)}>{t('New Call')}</Button>
+              <Menu anchorEl={newMenuAnchor} open={Boolean(newMenuAnchor)} onClose={() => setNewMenuAnchor(null)}>
+                <MenuItem onClick={() => { setNewMenuAnchor(null); setOpenDial(true); }}>
+                  <ListItemIcon><Iconify icon="eva:phone-call-fill" /></ListItemIcon>{t('Dialpad')}
+                </MenuItem>
+                <MenuItem onClick={() => { setNewMenuAnchor(null); setOpenContacts(true); }}>
+                  <ListItemIcon><Iconify icon="eva:people-fill" /></ListItemIcon>{t('Contact List')}
+                </MenuItem>
+              </Menu>
+            </>
           </Stack>
           <Box width="100%">
             <Card style={{ height: "600px", paddingTop: "15px" }}>

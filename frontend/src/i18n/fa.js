@@ -43,6 +43,7 @@ const fa = {
   'Call': 'تماس',
   'No phone number': 'شماره تلفنی موجود نیست',
   'Failed to place call': 'برقراری تماس ناموفق بود',
+  'Failed to save settings': 'ذخیره تنظیمات ناموفق بود',
   'Integration Enabled': 'اتصال فعال',
   'AMI Host': 'هاست AMI',
   'AMI Port': 'پورت AMI',
@@ -537,6 +538,12 @@ const fa = {
   'Close': 'بستن',
   'Recording URL Pattern': 'الگوی آدرس فایل‌های ضبط',
   'Placeholders': 'جایگاه‌ها',
+
+  // Click-to-call redesign
+  'Contact List': 'لیست مخاطبین',
+  'Place Call': 'برقراری تماس',
+  'Search contacts': 'جستجوی مخاطبین',
+  'No contacts found': 'مخاطبی یافت نشد',
 };
 
 export default fa;

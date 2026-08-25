@@ -43,6 +43,30 @@ const FreePbx = () => {
   const [engine, setEngine] = useState(null);
   const [testing, setTesting] = useState(false);
 
+  // Live engine status - merged over the previous snapshot so keys that the
+  // status endpoint doesn't return (e.g. hasSecret) survive.
+  // The Connected/Disconnected chip must NOT be a mount-only snapshot: a
+  // save answers "connecting..." before the AMI handshake settles, so the
+  // chip is refreshed on a short poll instead (same cadence as LiveCalls).
+  const loadEngine = async () => {
+    try {
+      const res = await axios.get(`${constant.baseUrl}freepbx/status`, authHeaders());
+      if (res.status === 200 && res.data && res.data.data) {
+        const live = res.data.data;
+        setEngine((prev) => ({ ...(prev || {}), ...live }));
+      }
+    } catch (err) {
+      /* keep last known state - transient blips shouldn't flip the chip */
+    }
+  };
+
+  useEffect(() => {
+    loadEngine();
+    const timer = setInterval(loadEngine, 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const formik = useFormik({
     enableReinitialize: true,
     initialValues: {
@@ -71,8 +95,15 @@ const FreePbx = () => {
       };
       const result = await apiput('freepbx/settings', payload);
       if (result && result.status === 200) {
-        setEngine(result.data.engine || null);
+        setEngine((prev) => ({ ...(prev || {}), ...(result.data.engine || {}) }));
         formik.setFieldValue('secret', '');
+        // The save responds while the AMI handshake is still in flight -
+        // re-read the engine state once it had a moment to settle.
+        setTimeout(loadEngine, 1500);
+      } else if (!result) {
+        // apiput only toasts 400 responses itself; other failures would
+        // otherwise disappear silently and leave stale values "saved".
+        toast.error(t('Failed to save settings'));
       }
     },
   });
@@ -131,6 +162,9 @@ const FreePbx = () => {
       toast.error(r.message || t('Connection failed'));
     } finally {
       setTesting(false);
+      // Refresh the status chip right away so it reflects reality after a
+      // manual probe (the poll would catch up within 5s anyway).
+      setTimeout(loadEngine, 300);
     }
   };
 

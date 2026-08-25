@@ -9,6 +9,7 @@ import Palette from '../../theme/palette'
 // eslint-disable-next-line arrow-body-style
 import { useTranslation } from '../../i18n';
 import { useDateFmt } from '../../utils/dateFmt';
+
 const Overview = ({ data }) => {
   const { t } = useTranslation();
   const { fd, fdt } = useDateFmt();
@@ -31,6 +32,10 @@ const Overview = ({ data }) => {
                 </Typography>
               </Grid>
               <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} py={2}>
+                <Typography variant="body1">{t('Phone Number :')}</Typography>
+                <Typography variant="body2" color={Palette.grey[600]} >{data?.phoneNumber || '-'}</Typography>
+              </Grid>
+              <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} py={2}>
                 <Typography variant="body1">{t('Note :')}</Typography>
                 <Typography variant="body2" color={Palette.grey[600]} >{data?.note}</Typography>
               </Grid>
@@ -47,6 +52,7 @@ const Overview = ({ data }) => {
                 <Typography variant="body2" color={Palette.grey[600]} >{data?.duration}</Typography>
               </Grid>
               {
+                (data?.lead_id?._id || data?.contact_id?._id) &&
                 <Grid style={{ borderBottom: "1.5px dashed", borderBottomColor: Palette.grey[400] }} py={2}>
                   <Typography variant="body1">Related To {data?.lead_id?._id ? 'Lead' : 'Contact'} :</Typography>
                   {
