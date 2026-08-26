@@ -1,4 +1,5 @@
 import Meetings from '../model/Meetings.js'
+import { crm } from "../utils/logger.js";
 
 
 const index = async (req, res) => {
@@ -25,7 +26,7 @@ const add = async (req, res) => {
         await meetings.save();
         res.status(201).json({ meetings, message: 'Meeting saved successfully' });
     } catch (err) {
-        console.error('Failed to create Meetings:', err);
+        crm.error('Failed to create Meetings:', err);
         res.status(500).json({ error: 'Failed to create Meetings' });
     }
 }
@@ -51,7 +52,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Meeting updated successfully' });
     } catch (err) {
-        console.error('Failed to Update Lead:', err);
+        crm.error('Failed to Update Lead:', err);
         res.status(400).json({ error: 'Failed to Update Lead' });
     }
 }

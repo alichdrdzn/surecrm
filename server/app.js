@@ -6,6 +6,8 @@ dotenv.config();
 import connectDB from "./db/connectdb.js";
 
 import cors from "cors";
+import { crm } from "./utils/logger.js";
+import requestLogger from "./middlewares/requestLogger.js";
 
 
 //Setup Express App
@@ -18,6 +20,9 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+//HTTP access log
+app.use(requestLogger);
+
 //Load Routes
 app.use("/", serverRoutes);
 
@@ -28,7 +33,7 @@ import freepbxService from "./services/freepbxService.js";
 // Get port from environment and store in Express.
 const port = process.env.PORT || "5000";
 app.listen(port, () => {
-  console.log(`Server listining at http://localhost:${port}`);
+  crm.info(`Server listening at http://localhost:${port}`);
 });
 
 

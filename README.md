@@ -536,3 +536,53 @@ SURECRM یک سیستم جامع مدیریت ارتباط با مشتری (CRM)
 **پایان راهنما**
 
 برای اطلاعات بیشتر یا سوالات اضافی، با تیم پشتیبانی تماس بگیرید.
+
+---
+
+## Logging (Administrator Guide)
+
+SureCRM writes structured logs to `/var/log/surecrm`, split by subsystem:
+
+| File | Subsystem | Content |
+|---|---|---|
+| `/var/log/surecrm/crm.log` | CRM | HTTP access, DB, SMTP mail, controllers |
+| `/var/log/surecrm/pbx.log` | PBX | FreePBX / Asterisk AMI integration |
+| `/var/log/surecrm/error.log` | both | every entry of level `error` and above |
+
+### First-time setup
+
+```bash
+sudo ./server/scripts/setup-logdir.sh          # creates /var/log/surecrm + logrotate policy
+sudo SERVICE_USER=www-data ./server/scripts/setup-logdir.sh   # custom service account
+```
+
+If the directory does not exist or is not writable (developer machines
+without root), the application automatically falls back to `server/logs/`
+and prints a one-time warning - it never crashes because of permissions.
+
+### Configuration (environment variables)
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_DIR` | `/var/log/surecrm` | log directory override |
+| `LOG_LEVEL` | `info` | minimum level (`error`, `warn`, `info`, `debug`) |
+| `LOG_CONSOLE` | on (`false` to disable) | mirror entries to stdout |
+
+File format is one JSON object per line (timestamp, level, subsystem, pid,
+message, stack trace when applicable), which is easy to ingest into ELK /
+Loki / CloudWatch. The console mirror is human-readable and colorized.
+
+### Usage in code
+
+```js
+import { crm, pbx } from "../utils/logger.js";
+
+crm.info("something happened", { leadId });
+crm.error("failed to do X:", err);      // also lands in error.log
+pbx.warn("AMI connection lost; will retry");
+```
+
+Rotation: `logrotate` rotates daily keeping 14 days (policy installed by
+the setup script); winston's 20 MB size cap acts as an extra safeguard.
+Unhandled promise rejections and uncaught exceptions are captured into
+`error.log`; an uncaught exception terminates the process after logging.

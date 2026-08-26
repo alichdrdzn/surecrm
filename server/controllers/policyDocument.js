@@ -1,4 +1,5 @@
 import policyDocument from "../model/policyDocument.js";
+import { crm } from "../utils/logger.js";
 
 
 const index = async (req, res) => {
@@ -25,7 +26,7 @@ const fileUpload = async (req, res) => {
         const file = await policyDocument.create({ path: req.file.path, file: req.file.originalname, fileName: fileName, policy_id: req.body.policy_id, createdBy: req.body.created_by });
         res.status(200).json({ file, message: "File uploaded successfully" });
     } catch (error) {
-        console.error(error.message);
+        crm.error(error.message);
         res.status(500).json({ error: error.message });
     }
 }
@@ -41,7 +42,7 @@ const downloadFile = async (req, res) => {
         res.download(file.path, file.name);
 
     } catch (error) {
-        console.error(error.message);
+        crm.error(error.message);
         res.status(500).json({ msg: error.message });
     }
 }

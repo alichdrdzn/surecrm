@@ -10,6 +10,9 @@ node_modules
 
 server/.env
 
+# local log fallback when /var/log/surecrm is not writable
+server/logs/
+
 */build/
 ./client/build/
 

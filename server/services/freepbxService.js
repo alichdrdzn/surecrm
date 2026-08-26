@@ -4,6 +4,7 @@ import Lead from "../model/Lead.js";
 import Contact from "../model/Contact.js";
 import User from "../model/User.js";
 import AmiClient, { AMI_STATE } from "../utils/amiClient.js";
+import { pbx } from "../utils/logger.js";
 
 /**
  * FreePBX integration service.
@@ -95,17 +96,17 @@ function _startClient() {
         try {
             _handleAmiEvent(evt);
         } catch (err) {
-            console.error("[freepbx] event handler error:", err.message);
+            pbx.error("event handler error:", err.message);
         }
     });
-    client.on("state", (st) => console.log(`[freepbx] AMI state -> ${st}`));
-    client.on("disconnected", () => console.warn("[freepbx] AMI connection lost; will retry"));
-    client.on("log", (level, msg) => console[level === "warn" ? "warn" : "log"](`[freepbx] ${msg}`));
+    client.on("state", (st) => pbx.info(`AMI state -> ${st}`));
+    client.on("disconnected", () => pbx.warn("AMI connection lost; will retry"));
+    client.on("log", (level, msg) => pbx[level === "warn" ? "warn" : "info"](msg));
 
     state.client = client;
     state.channels.clear();
     client.connect().catch((err) => {
-        console.error(`[freepbx] initial AMI connect failed: ${err.message}`);
+        pbx.error(`initial AMI connect failed: ${err.message}`);
         // client keeps retrying internally while enabled
     });
 }
@@ -157,14 +158,14 @@ async function init() {
                     },
                 }
             );
-            if (res.modifiedCount > 0) console.log(`[freepbx] closed ${res.modifiedCount} stale ringing placeholder(s)`);
+            if (res.modifiedCount > 0) pbx.info(`closed ${res.modifiedCount} stale ringing placeholder(s)`);
         } catch (e) {
             /* non-fatal */
         }
 
-        console.log("[freepbx] service initialized");
+        pbx.info("service initialized");
     } catch (err) {
-        console.error("[freepbx] init error:", err.message);
+        pbx.error("init error:", err.message);
     } finally {
         state.initializing = false;
     }
@@ -485,7 +486,7 @@ function _handleAmiEvent(evt) {
                 ch.hangupCauseTxt = evt["Cause-txt"] || evt.Cause_txt || "";
                 const relatedExts = _relatedExtensions(ch);
                 _finalizeChannel(ch, relatedExts).catch((err) =>
-                    console.error("[freepbx] finalize call failed:", err.message)
+                    pbx.error("finalize call failed:", err.message)
                 );
                 state.channels.delete(id);
             }
@@ -648,7 +649,7 @@ async function _maybeNotifyIncomingCall({ callerNum, callerName, destExten, link
             at: new Date().toISOString(),
         });
     } catch (err) {
-        console.error("[freepbx] incoming-call notify failed:", err.message);
+        pbx.error("incoming-call notify failed:", err.message);
     }
 }
 
@@ -886,7 +887,7 @@ async function _finalizeChannel(ch, relatedExts) {
         if (primary.linkedId) state.callsByLink.delete(String(primary.linkedId));
         return saved;
     } catch (err) {
-        console.error("[freepbx] persisting call failed:", err.message);
+        pbx.error("persisting call failed:", err.message);
         return null;
     }
 }

@@ -1,4 +1,5 @@
 import emailTemplate from "../model/emailTemplate.js";
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     const query = req.query
@@ -21,7 +22,7 @@ const add = async (req, res) => {
         await emailtemplate.save();
         res.json({ message: 'Design saved successfully.' });
     } catch (error) {
-        console.error(error);
+        crm.error(error);
         res.status(500).json({ message: 'Error saving design.' });
     }
 }
@@ -34,7 +35,7 @@ const view = async (req, res) => {
         }
         res.json({ emailtemplate });
     } catch (error) {
-        console.error(error);
+        crm.error(error);
         res.status(500).json({ message: 'Error retrieving design.' });
     }
 }
@@ -47,7 +48,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Email Template updated successfully' });
     } catch (err) {
-        console.error('Failed to Update EmailTemplate:', err);
+        crm.error('Failed to Update EmailTemplate:', err);
         res.status(400).json({ error: 'Failed to Update EmailTemplate' });
     }
 }

@@ -1,5 +1,6 @@
 import Emails from '../model/emails.js'
 import SendMail from '../middlewares/sendMail.js'
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     const query = req.query
@@ -36,7 +37,7 @@ const add = async (req, res) => {
                 : `Email saved, but sending failed: ${result.error}`,
         });
     } catch (err) {
-        console.error('Failed to create Email:', err);
+        crm.error('Failed to create Email:', err);
         res.status(500).json({ error: 'Failed to create Email' });
     }
 }

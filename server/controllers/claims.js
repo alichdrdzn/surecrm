@@ -1,4 +1,5 @@
 import Claims from '../model/claim.js'
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     const query = req.query
@@ -22,7 +23,7 @@ const add = async (req, res) => {
         await claims.save();
         res.status(201).json({ claims, message: 'Claim created successfully' });
     } catch (err) {
-        console.error('Failed to create Calls:', err);
+        crm.error('Failed to create Calls:', err);
         res.status(500).json({ error: 'Failed to create Calls' });
     }
 }
@@ -42,7 +43,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Claim updates successfully' });
     } catch (err) {
-        console.error('Failed to Update Call:', err);
+        crm.error('Failed to Update Call:', err);
         res.status(400).json({ error: 'Failed to Update Call' });
     }
 }

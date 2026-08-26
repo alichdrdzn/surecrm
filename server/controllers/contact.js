@@ -9,6 +9,7 @@ import Notes from '../model/Notes.js';
 import claim from '../model/claim.js';
 import Lead from '../model/Lead.js';
 import Emails from '../model/emails.js'
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     const query = req.query
@@ -56,7 +57,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Contact updated successfully' });
     } catch (err) {
-        console.error('Failed to Update Contact:', err);
+        crm.error('Failed to Update Contact:', err);
         res.status(400).json({ error: 'Failed to Update Contact' });
     }
 }
@@ -233,7 +234,7 @@ const deleteData = async (req, res) => {
 
         res.status(200).json({ message: "Contact and related data deleted successfully." });
     } catch (error) {
-        console.log(error);
+        crm.error(error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };
@@ -274,7 +275,7 @@ const deleteMany = async (req, res) => {
 
         res.status(200).json({ message: "Contacts and related data deleted successfully." });
     } catch (error) {
-        console.log(error);
+        crm.error(error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };

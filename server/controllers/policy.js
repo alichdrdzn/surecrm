@@ -3,6 +3,7 @@ import Policy from "../model/policy.js";
 import policyDocument from "../model/policyDocument.js";
 import claim from "../model/claim.js";
 import Notes from "../model/Notes.js";
+import { crm } from "../utils/logger.js";
 
 
 const index = async (req, res) => {
@@ -28,7 +29,7 @@ const add = async (req, res) => {
         await policy.save();
         res.status(201).json({ policy, message: 'Policy saved successfully' });
     } catch (err) {
-        console.error('Failed to create Meetings:', err);
+        crm.error('Failed to create Meetings:', err);
         res.status(500).json({ error: 'Failed to create Policy' });
     }
 }
@@ -96,7 +97,7 @@ const view = async (req, res) => {
         let populatedPolicy = await Policy.populate(policyaggregate, [{ path: "assigned_agent", select: ["firstName", "lastName"] }, { path: "contact_id", select: ["firstName", "lastName"] }]);
         res.status(200).json({ policy: populatedPolicy });
     } catch (error) {
-        console.log(error);
+        crm.error(error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };
@@ -112,7 +113,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Policy updated successfully' });
     } catch (err) {
-        console.error('Failed to Update Policy:', err);
+        crm.error('Failed to Update Policy:', err);
         res.status(400).json({ error: 'Failed to Update Policy' });
     }
 }
@@ -139,7 +140,7 @@ const deleteData = async (req, res) => {
 
         res.status(200).json({ message: "Policy and related data deleted successfully." });
     } catch (error) {
-        console.log(error);
+        crm.error(error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };
@@ -167,7 +168,7 @@ const deleteMany = async (req, res) => {
 
         res.status(200).json({ message: "Policys and related data deleted successfully." });
     } catch (error) {
-        console.log(error);
+        crm.error(error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };

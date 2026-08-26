@@ -1,4 +1,5 @@
 import Notes from '../model/Notes.js'
+import { crm } from "../utils/logger.js";
 
 
 const index = async (req, res) => {
@@ -23,7 +24,7 @@ const add = async (req, res) => {
         await notes.save();
         res.status(201).json({ notes, message: 'Note saved successfully' });
     } catch (err) {
-        console.error('Failed to create Note:', err);
+        crm.error('Failed to create Note:', err);
         res.status(500).json({ error: 'Failed to create Note' });
     }
 }
@@ -45,7 +46,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Note updated successfully' });
     } catch (err) {
-        console.error('Failed to Update Note:', err);
+        crm.error('Failed to Update Note:', err);
         res.status(400).json({ error: 'Failed to Update Note' });
     }
 }

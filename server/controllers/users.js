@@ -1,6 +1,7 @@
 import User from '../model/User.js';
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     let result = await User.find({ deleted: false })
@@ -30,7 +31,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'User updated successfully' });
     } catch (err) {
-        console.error('Failed to Update User:', err);
+        crm.error('Failed to Update User:', err);
         res.status(400).json({ error: 'Failed to Update User' });
     }
 }
@@ -77,7 +78,7 @@ const register = async (req, res) => {
 
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
-        console.error('Signup error:', error);
+        crm.error('Signup error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 }

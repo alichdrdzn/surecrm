@@ -1,4 +1,12 @@
 import nodemailer from 'nodemailer'
+import dotenv from 'dotenv'
+
+// Module-level SMTP config below is read at import time; because ESM imports
+// are hoisted ahead of app.js's dotenv.config(), load .env here explicitly.
+// Idempotent - existing environment variables are never overridden.
+dotenv.config()
+
+import { crm } from "../utils/logger.js"
 
 // ----------------------------------------------------------------------
 // SMTP configuration comes from environment variables so no credentials
@@ -39,7 +47,7 @@ const sendMail = async (to, subject, message, html) => {
   if (!transporter) {
     const err =
       'SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM in the server environment.'
-    console.error('Error sending email:', err)
+    crm.error('Error sending email:', err)
     return { ok: false, error: err }
   }
   try {
@@ -53,10 +61,10 @@ const sendMail = async (to, subject, message, html) => {
 
     const info = await transporter.sendMail(mailOptions)
 
-    console.log('Email sent:', info.response)
+    crm.info('Email sent:', info.response)
     return { ok: true, response: info.response }
   } catch (error) {
-    console.error('Error sending email:', error.message)
+    crm.error('Error sending email:', error.message)
     return { ok: false, error: error.message }
   }
 }

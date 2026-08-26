@@ -1,4 +1,5 @@
 import Calls from "../model/Calls.js";
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     const query = req.query
@@ -20,7 +21,7 @@ const add = async (req, res) => {
         await calls.save();
         res.status(201).json({ calls, message: 'Call saved successfully' });
     } catch (err) {
-        console.error('Failed to create Calls:', err);
+        crm.error('Failed to create Calls:', err);
         res.status(500).json({ error: 'Failed to create Calls' });
     }
 }
@@ -38,7 +39,7 @@ const view = async (req, res) => {
         }
         res.status(200).json({ calls });
     } catch (error) {
-        console.error('Error:', error);
+        crm.error('Error:', error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };
@@ -52,7 +53,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Call updated successfully' });
     } catch (err) {
-        console.error('Failed to Update Call:', err);
+        crm.error('Failed to Update Call:', err);
         res.status(400).json({ error: 'Failed to Update Call' });
     }
 }

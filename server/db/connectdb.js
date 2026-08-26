@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import User from '../model/User.js';
 import bcrypt from 'bcrypt'
+import { crm } from "../utils/logger.js";
 
 const connectDB = async (DATABASE_URL,DB_NAME) => {
 	try {
@@ -21,14 +22,14 @@ const connectDB = async (DATABASE_URL,DB_NAME) => {
 			const user = new User({ _id: new mongoose.Types.ObjectId('64d5bd3aca0be228afc9e267'), emailAddress, password: hashedPassword, firstName, lastName, role: 'admin' });
 			// Save the user to the database
 			await user.save();
-			console.log("Admin created successfully..");
+			crm.info("Admin created successfully");
 		} else if (adminExisting[0].deleted === true) {
 			await User.findByIdAndUpdate(adminExisting[0]._id, { deleted: false });
-			console.log("Admin Update successfully..");
+			crm.info("Admin updated successfully");
 		}
-		console.log("Database Connected Successfully..");
+		crm.info("Database connected successfully");
 	} catch (err) {
-		console.log(err);
+		crm.error("Database connection failed:", err);
 	}
 }
 

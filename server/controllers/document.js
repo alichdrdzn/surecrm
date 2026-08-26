@@ -1,4 +1,5 @@
 import Document from "../model/document.js";
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
     const query = req.query
@@ -24,7 +25,7 @@ const fileUpload = async (req, res) => {
         const file = await Document.create({ path: req.file.path, file: req.file.originalname, fileName: fileName, createdBy: req.body.createdBy });
         res.status(200).json({ file, message: "File uploaded successfully" });
     } catch (error) {
-        console.error(error.message);
+        crm.error(error.message);
         res.status(500).json({ error: error.message });
     }
 }
@@ -40,7 +41,7 @@ const downloadFile = async (req, res) => {
         res.download(file.path, file.name);
 
     } catch (error) {
-        console.error(error.message);
+        crm.error(error.message);
         res.status(500).json({ msg: error.message });
     }
 }

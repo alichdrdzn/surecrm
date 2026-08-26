@@ -1,5 +1,6 @@
 import Meetings from "../model/Meetings.js";
 import Tasks from "../model/Tasks.js";
+import { crm } from "../utils/logger.js";
 
 
 const index = async (req, res) => {
@@ -21,7 +22,7 @@ const add = async (req, res) => {
         await tasks.save();
         res.status(201).json({ tasks, message: 'Task saved successfully' });
     } catch (err) {
-        console.error('Failed to create Task:', err);
+        crm.error('Failed to create Task:', err);
         res.status(500).json({ error: 'Failed to create Task' });
     }
 }
@@ -47,7 +48,7 @@ const edit = async (req, res) => {
         );
         res.status(200).json({ result, message: 'Task updated successfully' });
     } catch (err) {
-        console.error('Failed to Update Task:', err);
+        crm.error('Failed to Update Task:', err);
         res.status(400).json({ error: 'Failed to Update Task' });
     }
 }

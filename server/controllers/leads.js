@@ -5,6 +5,7 @@ import Calls from "../model/Calls.js";
 import Meetings from "../model/Meetings.js";
 import Tasks from "../model/Tasks.js";
 import Emails from "../model/emails.js";
+import { crm } from "../utils/logger.js";
 
 const index = async (req, res) => {
   const query = req.query
@@ -27,7 +28,7 @@ const add = async (req, res) => {
     await lead.save();
     res.status(201).json({ lead, message: 'Lead saved successfully' });
   } catch (err) {
-    console.error('Failed to create Lead:', err);
+    crm.error('Failed to create Lead:', err);
     res.status(500).json({ error: 'Failed to create Lead' });
   }
 }
@@ -41,7 +42,7 @@ const edit = async (req, res) => {
     );
     res.status(200).json({ result, message: 'Lead updated successfully' });
   } catch (err) {
-    console.error('Failed to Update Lead:', err);
+    crm.error('Failed to Update Lead:', err);
     res.status(400).json({ error: 'Failed to Update Lead' });
   }
 }
@@ -143,7 +144,7 @@ const view = async (req, res) => {
     let populatedLead = await Lead.populate(lead, { path: "assigned_agent", select: ["firstName", "lastName"] });
     res.status(200).json({ lead: populatedLead });
   } catch (error) {
-    console.log(error);
+    crm.error(error);
     res.status(500).json({ message: "Internal Server Error." });
   }
 };
@@ -177,7 +178,7 @@ const deleteData = async (req, res) => {
 
     res.status(200).json({ message: "Lead and related data deleted successfully." });
   } catch (error) {
-    console.log(error);
+    crm.error(error);
     res.status(500).json({ message: "Internal Server Error." });
   }
 };
@@ -211,7 +212,7 @@ const deleteMany = async (req, res) => {
 
     res.status(200).json({ message: "Leads and related data deleted successfully." });
   } catch (error) {
-    console.log(error);
+    crm.error(error);
     res.status(500).json({ message: "Internal Server Error." });
   }
 };
