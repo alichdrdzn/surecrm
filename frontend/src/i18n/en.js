@@ -443,8 +443,11 @@ const fa = {
 
   // Telephony — calls, dialpad & recordings
   'Dial': 'Dial',
+  'Outgoing Call': 'Outgoing Call',
   'Dialpad': 'Dialpad',
   'Your Extension': 'Your Extension',
+  'Connected': 'Connected',
+  'Failed': 'Failed',
   'Dial From Extension': 'Dial From Extension',
   'Save Extension': 'Save Extension',
   'Extension saved': 'Extension saved',

@@ -1,0 +1,13 @@
+# SureCRM application logs (written by the Node.js process).
+# copytruncate because winston keeps the files open across rotations.
+/var/log/surecrm/*.log {
+    daily
+    rotate 14
+    size 50M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    dateext
+}

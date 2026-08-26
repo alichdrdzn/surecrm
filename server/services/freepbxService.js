@@ -29,6 +29,9 @@ const state = {
     channels: new Map(),   // uniqueId -> channel info
     sseClients: new Set(), // {id, userId, extension, res}
     agentExtensions: new Map(), // extension -> {_id, firstName, lastName}
+    pendingOrigins: new Map(), // agentExt -> {number, docId, at} (ring legs of calls placed from the CRM)
+    finalizedLinks: new Map(), // linkedId -> timestamp (calls already persisted; channels end one-by-one)
+    callsByLink: new Map(),    // linkedId -> live call lifecycle {docId, number, direction, agentExts, answeredAt, ...}
 
     timers: {
         agentsRefresh: null,
@@ -38,6 +41,8 @@ const state = {
 
 const SSE_HEARTBEAT_MS = 25000;
 const AGENTS_REFRESH_MS = 30000;
+/** How long a pending click-to-call ring leg stays recognizable as outgoing. */
+const ORIGIN_TTL_MS = 120000;
 
 // ---------------------------------------------------------------------- //
 // Settings & lifecycle                                                    //
@@ -132,6 +137,31 @@ async function init() {
         _startTimers();
         await refreshAgentExtensions();
         await reloadSettings();
+
+        // Boot cleanup: click-to-call placeholders left "Ringing" because a
+        // restart interrupted the call before any AMI Hangup was observed.
+        // Anything older than 15 min can no longer be a live ring.
+        try {
+            const res = await Calls.updateMany(
+                {
+                    source: "freepbx",
+                    status: "Ringing",
+                    deleted: false,
+                    createdOn: { $lt: new Date(Date.now() - 15 * 60000) },
+                },
+                {
+                    $set: {
+                        status: "Failed",
+                        note: "Auto-closed on startup: the call never completed (CRM restarted mid-call)",
+                        modifiedOn: new Date(),
+                    },
+                }
+            );
+            if (res.modifiedCount > 0) console.log(`[freepbx] closed ${res.modifiedCount} stale ringing placeholder(s)`);
+        } catch (e) {
+            /* non-fatal */
+        }
+
         console.log("[freepbx] service initialized");
     } catch (err) {
         console.error("[freepbx] init error:", err.message);
@@ -144,6 +174,7 @@ function _startTimers() {
     if (!state.timers.agentsRefresh) {
         state.timers.agentsRefresh = setInterval(() => {
             refreshAgentExtensions().catch(() => {});
+            _sweepCallStates();
         }, AGENTS_REFRESH_MS);
     }
     if (!state.timers.sseHeartbeat) {
@@ -224,17 +255,23 @@ function _updateChannel(evt) {
  */
 function _relatedExtensions(ch) {
     const exts = new Set();
-    const addIfAgent = (name) => {
-        const e = String(ch.exten || _extenFromChannelName(name));
+    // An extension counts only if the channel itself resolves to it. Note
+    // ch.exten may hold DIALED DIGITS (dial-begin enrichment), so always fall
+    // back to the name-derived extension when exten is not an agent ext.
+    const consider = (c) => {
+        const e = String(
+            c.exten && state.agentExtensions.has(String(c.exten))
+                ? c.exten
+                : _extenFromChannelName(c.channelName)
+        );
         if (e && state.agentExtensions.has(e)) exts.add(e);
     };
-    addIfAgent(ch.channelName);
+    consider(ch);
     const lid = ch.linkedId;
     if (lid) {
         for (const [, other] of state.channels) {
             if (other === ch || !other.linkedId || other.linkedId !== lid) continue;
-            const e = String(other.exten || _extenFromChannelName(other.channelName));
-            if (e && state.agentExtensions.has(e)) exts.add(e);
+            consider(other);
         }
     }
     return Array.from(exts);
@@ -251,6 +288,91 @@ function _extenFromChannelName(name) {
     return m ? m[1] : "";
 }
 
+/** True when the channel belongs to one of our agents' extensions. */
+function _isAgentChannel(ch) {
+    if (!ch) return false;
+    if (ch.exten && state.agentExtensions.has(String(ch.exten))) return true;
+    const nameExt = _extenFromChannelName(ch.channelName);
+    return Boolean(nameExt && state.agentExtensions.has(nameExt));
+}
+
+/** Still-tracked sibling channels of the same call (shared Linkedid). */
+function _linkedPeers(ch) {
+    if (!ch.linkedId) return [];
+    const peers = [];
+    for (const [, other] of state.channels) {
+        if (other !== ch && other.linkedId && other.linkedId === ch.linkedId) peers.push(other);
+    }
+    return peers;
+}
+
+/**
+ * Live lifecycle record of an in-flight call, keyed by Asterisk Linkedid.
+ * Gives the app real awareness of what happens to a call:
+ *   ringing -> answered ("call_answered" SSE) -> ended ("call_ended" SSE)
+ */
+function _ensureCallState(linkedId) {
+    if (!linkedId) return null;
+    const key = String(linkedId);
+    let cs = state.callsByLink.get(key);
+    if (!cs) {
+        cs = {
+            linkedId: key,
+            docId: "",          // Calls document pre-created by click-to-call (if any)
+            number: "",         // external party
+            direction: "",      // Inbound | Outbound
+            agentExts: new Set(),
+            startedAt: Date.now(),
+            answeredAt: null,
+            answeredPushed: false,
+        };
+        state.callsByLink.set(key, cs);
+    }
+    return cs;
+}
+
+/** Every agent extension currently involved in the linked call. */
+function _agentsOnLink(linkedId) {
+    const exts = new Set();
+    if (!linkedId) return exts;
+    const cs = state.callsByLink.get(String(linkedId));
+    if (cs) for (const e of cs.agentExts) exts.add(e);
+    for (const [, ch] of state.channels) {
+        if (!ch.linkedId || String(ch.linkedId) !== String(linkedId)) continue;
+        const e = String(ch.exten || _extenFromChannelName(ch.channelName));
+        if (e && state.agentExtensions.has(e)) exts.add(e);
+    }
+    return exts;
+}
+
+/**
+ * First-answer transition of a call. Pushes "call_answered" ONCE to every
+ * involved agent so their UI switches from "Calling..." to Connected.
+ */
+function _markCallAnswered(linkedId, extra = {}) {
+    const cs = _ensureCallState(linkedId);
+    if (!cs || cs.answeredPushed) return;
+    cs.answeredPushed = true;
+    cs.answeredAt = Date.now();
+    if (!cs.number && extra.number) cs.number = extra.number;
+    if (!cs.direction && extra.direction) cs.direction = extra.direction;
+
+    pushToExtensions(Array.from(_agentsOnLink(linkedId)), "call_answered", {
+        id: cs.docId,
+        number: cs.number,
+        direction: cs.direction,
+        answeredAt: new Date(cs.answeredAt).toISOString(),
+    });
+}
+
+/** Drop lifecycle entries of long-gone calls (safety net against leaks). */
+function _sweepCallStates() {
+    const cutoff = Date.now() - 6 * 3600000;
+    for (const [k, cs] of state.callsByLink) {
+        if (cs.startedAt < cutoff) state.callsByLink.delete(k);
+    }
+}
+
 function _handleAmiEvent(evt) {
     const event = (evt.Event || "").toLowerCase();
 
@@ -263,6 +385,18 @@ function _handleAmiEvent(evt) {
             const ch = _updateChannel(evt);
             if (ch && /up/i.test(evt.ChannelStateDesc || "") && !ch.answerAt) {
                 ch.answerAt = Date.now();
+                // The "call_answered" transition fires only when an EXTERNAL
+                // party's channel goes Up. Agent-owned legs are excluded:
+                // their "Up" means the agent picked up, not that the remote
+                // party did (their answerAt is still recorded factually).
+                if (_isAgentChannel(ch)) break;
+                const num = _externalNumber(ch);
+                if (num && ch.linkedId) {
+                    const cs = _ensureCallState(ch.linkedId);
+                    if (!cs.number) cs.number = num;
+                    if (!cs.direction) cs.direction = ch.direction || _detectDirection(ch);
+                    _markCallAnswered(ch.linkedId, { number: num });
+                }
             }
             break;
         }
@@ -273,13 +407,73 @@ function _handleAmiEvent(evt) {
             const destCh = destId ? _updateChannel({ ...evt, Uniqueid: undefined, UniqueID: undefined }) : null;
             if (destCh && destId) destCh.uniqueId = destId;
 
+            // Enrich the DIALING channel as well: for calls placed straight on
+            // the phone (outside the CRM) the dialed number only becomes known
+            // through these events. Without this the agent leg ends up with no
+            // external number and the call is never logged.
+            const srcId = evt.Uniqueid || evt.UniqueID;
+            const srcCh = srcId ? state.channels.get(srcId) : null;
+            if (srcCh) {
+                // Adopt the destination number only for our own agents' legs,
+                // never for trunk channels receiving inbound calls.
+                const nameExt = _extenFromChannelName(srcCh.channelName);
+                const srcIsAgent =
+                    (nameExt && state.agentExtensions.has(nameExt)) ||
+                    state.agentExtensions.has(String(srcCh.callerIdNum));
+                let srcExten;
+                if (evt.Exten) srcExten = evt.Exten;
+                else if (srcIsAgent && evt.DestExten) srcExten = evt.DestExten;
+                if (srcExten && !srcCh.exten) srcCh.exten = srcExten;
+                const lid = evt.Linkedid || evt.LinkedID;
+                if (lid && !srcCh.linkedId) srcCh.linkedId = lid;
+
+                // Seed the live call lifecycle with what we now know
+                if (lid) {
+                    const cs = _ensureCallState(lid);
+                    const agentExt = _extenFromChannelName(srcCh.channelName);
+                    if (agentExt && state.agentExtensions.has(agentExt)) cs.agentExts.add(agentExt);
+                    const candNum = String(srcCh.exten || "");
+                    if (!cs.number && candNum && !state.agentExtensions.has(candNum)) cs.number = candNum;
+                    if (!cs.direction) cs.direction = _detectDirection(srcCh);
+                }
+            }
+
             const callerNum = evt.CallerIDNum || evt.DestCallerIDNum || "";
             const destExten =
                 evt.DestExten ||
                 (destCh && destCh.exten) ||
                 _extenFromChannelName(evt.DestChannel || "");
 
-            _maybeNotifyIncomingCall({ callerNum, callerName: evt.CallerIDName || "", destExten });
+            _maybeNotifyIncomingCall({
+                callerNum,
+                callerName: evt.CallerIDName || "",
+                destExten,
+                linkedId: evt.Linkedid || evt.LinkedID || "",
+            });
+            break;
+        }
+
+        case "bridgeenter": {
+            // Voice is flowing between two channels - strongest "answered"
+            // signal. Only treated as THE answer when an external party is on
+            // the bridge (agent-pickup bridges must not fire it prematurely).
+            const lid = evt.Linkedid || evt.LinkedID || "";
+            if (!lid) break;
+            let extNum = "";
+            for (const uid of [evt.Uniqueid1 || evt.UniqueID1, evt.Uniqueid2 || evt.UniqueID2]) {
+                const c = uid ? state.channels.get(uid) : null;
+                if (!c) continue;
+                const n = _externalNumber({ ...c, direction: c.direction || _detectDirection(c) });
+                if (n) {
+                    extNum = n;
+                    if (!c.answerAt) c.answerAt = Date.now();
+                }
+            }
+            if (extNum) {
+                const cs = _ensureCallState(lid);
+                if (!cs.number) cs.number = extNum;
+                _markCallAnswered(lid, { number: extNum });
+            }
             break;
         }
 
@@ -378,14 +572,70 @@ async function findCrmMatch(rawNumber) {
 // ---------------------------------------------------------------------- //
 
 /**
+ * Click-to-call bookkeeping. An AMI Originate first rings the AGENT'S OWN
+ * extension; without this ledger the DialBegin of that very leg would be
+ * misread as an inbound call and the agent would get an "Incoming Call"
+ * screen-pop for the number they just dialed out to.
+ */
+function _rememberOriginate(agentExtension, number, docId) {
+    const now = Date.now();
+    for (const [k, v] of state.pendingOrigins) {
+        if (now - v.at > ORIGIN_TTL_MS) state.pendingOrigins.delete(k);
+    }
+    state.pendingOrigins.set(String(agentExtension), {
+        number: String(number || ""),
+        docId: docId ? String(docId) : "",
+        at: now,
+    });
+}
+
+function _forgetOriginate(agentExtension) {
+    state.pendingOrigins.delete(String(agentExtension));
+}
+
+function _consumePendingOriginate(agentExtension) {
+    const key = String(agentExtension);
+    const entry = state.pendingOrigins.get(key);
+    if (!entry) return null;
+    state.pendingOrigins.delete(key);
+    if (Date.now() - entry.at > ORIGIN_TTL_MS) return null; // stale - ignore
+    return entry;
+}
+
+/**
  * Called on DialBegin. If the dialed party is one of our agents'
  * extensions and the calling party carries an (external) number, push an
  * "incoming_call" event to that agent's SSE streams.
+ * If instead the ring is the agent-side leg of a call placed from the CRM,
+ * push an "outgoing_call" event so the UI reports it as outgoing.
  */
-async function _maybeNotifyIncomingCall({ callerNum, callerName, destExten }) {
+async function _maybeNotifyIncomingCall({ callerNum, callerName, destExten, linkedId }) {
     try {
         if (!callerNum || !destExten) return;
         if (!state.agentExtensions.has(String(destExten))) return;
+
+        // This ring is the agent being called back by their own outbound dial
+        const origin = _consumePendingOriginate(destExten);
+        if (origin) {
+            const outNumber = origin.number || callerNum;
+            // Bind the CRM row to the live call lifecycle for later transitions
+            const cs = _ensureCallState(linkedId);
+            if (cs) {
+                cs.docId = origin.docId || "";
+                if (!cs.number) cs.number = outNumber;
+                if (!cs.direction) cs.direction = "Outbound";
+                cs.agentExts.add(String(destExten));
+            }
+            pushToExtensions([String(destExten)], "outgoing_call", {
+                to: outNumber,
+                extension: String(destExten),
+                match: await findCrmMatch(outNumber),
+                callId: origin.docId,
+                at: new Date().toISOString(),
+            });
+            return;
+        }
+
         // Ignore internal-to-internal dials (extension calling extension)
         if (state.agentExtensions.has(String(callerNum))) return;
 
@@ -452,14 +702,17 @@ function _detectDirection(ch) {
 
 /** External party of the call (what the CRM cares about). */
 function _externalNumber(ch) {
-    if (ch.direction === "Inbound") {
-        // For inbound, callerIdNum is external unless it's an internal ext
-        if (ch.callerIdNum && !state.agentExtensions.has(String(ch.callerIdNum))) {
+    const dir = ch.direction || _detectDirection(ch);
+    // A value that is itself one of our extensions is never the external party
+    const isInternal = (n) => n && state.agentExtensions.has(String(n));
+    if (dir === "Inbound") {
+        if (ch.callerIdNum && !isInternal(ch.callerIdNum)) {
             return ch.callerIdNum;
         }
         return "";
     }
-    return ch.exten || "";
+    const num = String(ch.exten || "");
+    return num && !isInternal(num) ? num : "";
 }
 
 /**
@@ -492,57 +745,145 @@ function _buildRecordingUrl(settings, ch, number) {
 }
 
 /**
- * Persist one finished PBX channel as a record in the existing Calls model.
- * Only meaningful calls are stored (an external party must exist).
+ * Persist one finished PBX call as a record in the existing Calls model.
  *
- * @param {object} ch tracked channel
+ * A single call spans several AMI channels (agent leg, trunk leg, local legs)
+ * that share a Linkedid. Exactly ONE Calls row is persisted per call:
+ *   - the agent's own channel is preferred as the source of truth, so calls
+ *     dialed directly on the desk phone (outside SureCRM) are logged too;
+ *   - rows are attributed to the user owning the involved extension;
+ *   - the pre-created click-to-call row ("Ringing") is completed instead of
+ *     being duplicated.
+ *
+ * @param {object} ch tracked channel that just hung up
  * @param {string[]} [relatedExts] agent extensions involved in this call
  */
 async function _finalizeChannel(ch, relatedExts) {
     try {
-        ch.direction = _detectDirection(ch);
-        const number = _externalNumber(ch);
+        // Channels of the same call hang up one-by-one; keep a single row
+        if (ch.linkedId && state.finalizedLinks.has(ch.linkedId)) return null;
+
+        const group = [..._linkedPeers(ch), ch];
+
+        // Prefer the agent's own channel: it reliably carries the external
+        // number for outbound dials made from the CRM *or* the phone itself.
+        let primary = group.find((c) => _isAgentChannel(c)) || ch;
+        primary.direction = _detectDirection(primary);
+        let number = _externalNumber(primary);
+        if (!number) {
+            // e.g. inbound ring leg - the external caller is on another channel
+            for (const cand of group) {
+                if (cand === primary) continue;
+                cand.direction = cand.direction || _detectDirection(cand);
+                const n = _externalNumber(cand);
+                if (n) {
+                    primary = cand;
+                    number = n;
+                    break;
+                }
+            }
+        }
         if (!number) return; // purely internal / system channel
+
+        // ---- IMMUTABLE SNAPSHOT (taken synchronously, before ANY await) ----
+        // Sibling channels of the same call hang up moments later and mutate
+        // the shared tracked objects. Everything the disposition/duration is
+        // computed from MUST be captured now, not after the DB awaits below.
+        const snap = {
+            linkedId: primary.linkedId || "",
+            uniqueId: primary.uniqueId || "",
+            channelName: primary.channelName,
+            direction: primary.direction,
+            cause: ch.hangupCause || "",       // the channel THAT hung up
+            causeTxt: ch.hangupCauseTxt || "",
+            answerAt: group.reduce((acc, c) => Math.max(acc, c.answerAt ? Number(c.answerAt) : 0), 0),
+            exten: primary.exten || "",
+        };
+        const disposition = _disposition({ answerAt: snap.answerAt || null, hangupCause: snap.cause, direction: snap.direction });
+
+        if (primary.linkedId) {
+            state.finalizedLinks.set(primary.linkedId, Date.now());
+            if (state.finalizedLinks.size > 500) {
+                const cutoff = Date.now() - 3600000;
+                for (const [k, t] of state.finalizedLinks) {
+                    if (t < cutoff) state.finalizedLinks.delete(k);
+                }
+            }
+        }
 
         const settings = await getSettings();
         const match = await findCrmMatch(number);
         const endedAt = Date.now();
-        const talkMs = ch.answerAt ? Math.max(0, endedAt - ch.answerAt) : 0;
+        const talkMs = snap.answerAt ? Math.max(0, endedAt - snap.answerAt) : 0;
 
-        const doc = new Calls({
-            subject:
-                match && match.label
-                    ? `${ch.direction} call - ${match.label}`
-                    : `${ch.direction} call from/to ${number}`,
-            status: _disposition(ch),
-            startDateTime: new Date(ch.startAt).toISOString(),
+        // Attribute the call to the user behind the involved extension
+        const ownerExt = relatedExts && relatedExts.length ? String(relatedExts[0]) : "";
+        const agentUser = ownerExt ? state.agentExtensions.get(ownerExt) : null;
+
+        // A row for this very call may already exist (multi-channel hangups)
+        let saved = primary.linkedId
+            ? await Calls.findOne({ source: "freepbx", pbxLinkedId: primary.linkedId, deleted: false })
+            : null;
+
+        // Complete the click-to-call placeholder row instead of duplicating it
+        if (!saved && agentUser && primary.direction === "Outbound") {
+            saved = await Calls.findOne({
+                source: "freepbx",
+                direction: "Outbound",
+                status: "Ringing",
+                deleted: false,
+                createdBy: agentUser._id,
+                phoneNumber: new RegExp(`${number}$`),
+            }).sort({ createdOn: -1 });
+        }
+
+        const patch = {
+            status: disposition,
             duration: _formatDuration(talkMs),
-            relatedTo: match ? match.type : "None",
-            lead_id: match && match.type === "Lead" ? match.id : undefined,
-            contact_id: match && match.type === "Contact" ? match.id : undefined,
-            note: `Auto-logged from FreePBX. Channel: ${ch.channelName}. Cause: ${ch.hangupCauseTxt || ch.hangupCause || "-"}`,
-            source: "freepbx",
-            direction: ch.direction,
-            phoneNumber: number,
-            pbxUniqueId: ch.uniqueId,
-            pbxChannel: ch.channelName,
-            recordingUrl: _buildRecordingUrl(settings, ch, number),
-            createdBy: null,
-        });
-        const saved = await doc.save();
+            note: `Auto-logged from FreePBX. Channel: ${snap.channelName}. Cause: ${snap.causeTxt || snap.cause || "-"}`,
+            pbxUniqueId: snap.uniqueId,
+            pbxLinkedId: snap.linkedId,
+            pbxChannel: snap.channelName,
+            recordingUrl: _buildRecordingUrl(settings, { ...primary, exten: snap.exten }, number),
+            modifiedOn: new Date(),
+        };
+
+        if (saved) {
+            Object.assign(saved, patch);
+            await saved.save();
+        } else {
+            const doc = new Calls({
+                subject:
+                    match && match.label
+                        ? `${primary.direction} call - ${match.label}`
+                        : `${primary.direction} call from/to ${number}`,
+                startDateTime: new Date(primary.startAt).toISOString(),
+                relatedTo: match ? match.type : "None",
+                lead_id: match && match.type === "Lead" ? match.id : undefined,
+                contact_id: match && match.type === "Contact" ? match.id : undefined,
+                source: "freepbx",
+                direction: primary.direction,
+                phoneNumber: number,
+                createdBy: agentUser ? agentUser._id : null,
+                ...patch,
+            });
+            saved = await doc.save();
+        }
 
         pushCallEnded(
             {
                 id: String(saved._id),
                 subject: saved.subject,
                 status: saved.status,
-                direction: ch.direction,
+                direction: primary.direction,
                 number,
                 duration: saved.duration,
                 match,
             },
             relatedExts && relatedExts.length ? relatedExts : []
         );
+        // Lifecycle of this call is over - drop it (finalizedLinks keeps dedup)
+        if (primary.linkedId) state.callsByLink.delete(String(primary.linkedId));
         return saved;
     } catch (err) {
         console.error("[freepbx] persisting call failed:", err.message);
@@ -580,10 +921,14 @@ async function originate({ agentUserId, agentExtension, number, lead_id, contact
         contact_id: contact_id || undefined,
         note: "Click-to-call via FreePBX",
         source: "freepbx",
+        direction: "Outbound",
         phoneNumber: number,
         createdBy: agentUserId || null,
     });
     await doc.save();
+
+    // Tag the agent-ring leg so it gets reported as OUTGOING (never incoming)
+    _rememberOriginate(agentExtension, digits, doc._id);
 
     try {
         await state.client.send({
@@ -598,6 +943,7 @@ async function originate({ agentUserId, agentExtension, number, lead_id, contact
             Variable: "__SURECRMCALLID=" + String(doc._id),
         });
     } catch (err) {
+        _forgetOriginate(agentExtension); // PBX rejected it - no ring leg will follow
         await Calls.findByIdAndUpdate(doc._id, { status: "Failed", note: `AMI Originate failed: ${err.message}` });
         throw Object.assign(new Error(`PBX rejected the call: ${err.message}`), { status: 502 });
     }
@@ -785,6 +1131,9 @@ export default {
     pushToExtensions,
     testConnection,
 };
+
+/** Test-only access to internals (not used by production callers). */
+export const __testHooks = { state, handleAmiEvent: _handleAmiEvent };
 
 
 

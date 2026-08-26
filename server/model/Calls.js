@@ -25,6 +25,7 @@ const Calls = new mongoose.Schema({
     direction: { type: String, default: "" },    // "Inbound" | "Outbound" ("" for legacy/manual rows)
     phoneNumber: { type: String, default: "" },  // external party of the call
     pbxUniqueId: { type: String, default: "" },  // Asterisk Uniqueid
+    pbxLinkedId: { type: String, default: "" },  // Asterisk Linkedid (groups all channels of one call)
     pbxChannel: { type: String, default: "" },   // Asterisk channel name
     recordingUrl: { type: String, default: "" }, // playback URL of the call recording
 

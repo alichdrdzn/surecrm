@@ -79,6 +79,8 @@ const Dialpad = ({ open, handleClose }) => {
     if (!result) {
       toast.error(t('Failed to place call'));
     } else {
+      // Pop the Outgoing Call dialog immediately from this browser
+      window.dispatchEvent(new CustomEvent('surecrm-outgoing', { detail: { number: number.trim() } }));
       handleClose(); // success message is toasted by apipost
     }
   };
@@ -106,6 +108,8 @@ const Dialpad = ({ open, handleClose }) => {
               placeholder={t('Enter phone number')}
               value={number}
               onChange={(e) => setNumber(e.target.value)}
+              // Phone numbers always read LTR, even in Farsi/RTL mode
+              inputProps={{ dir: 'ltr' }}
               InputProps={{
                 endAdornment: (
                   <Button color="error" onClick={() => setNumber((v) => v.slice(0, -1))} disabled={!number}>
@@ -115,7 +119,9 @@ const Dialpad = ({ open, handleClose }) => {
               }}
             />
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+            {/* Keypad keeps the universal telephone layout (1-2-3 on top-left)
+                regardless of the UI language direction */}
+            <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
               {KEYS.map((k) => (
                 <Button key={k} variant="outlined" onClick={() => press(k)} sx={{ py: 1.5, fontSize: '1.1rem' }}>
                   {k}

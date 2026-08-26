@@ -24,6 +24,9 @@ const CallButton = ({ number, leadId, contactId, size = 'small' }) => {
     if (!result) {
       // axios threw (non-2xx): apipost only surfaces 400/401 messages itself
       toast.error(t('Failed to place call'));
+    } else {
+      // Pop the Outgoing Call dialog immediately from this browser
+      window.dispatchEvent(new CustomEvent('surecrm-outgoing', { detail: { number } }));
     }
   };
 
