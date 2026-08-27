@@ -5,6 +5,10 @@ import Contact from "../model/Contact.js";
 import User from "../model/User.js";
 import AmiClient, { AMI_STATE } from "../utils/amiClient.js";
 import { pbx } from "../utils/logger.js";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { execFile } from "child_process";
 
 /**
  * FreePBX integration service.
@@ -784,7 +788,18 @@ async function _finalizeChannel(ch, relatedExts) {
                 }
             }
         }
-        if (!number) return; // purely internal / system channel
+
+        // The live-lifecycle record (populated by DialBegin for CRM-placed
+        // calls) is authoritative: it knows the exact pre-created document.
+        const liveCs = primary.linkedId ? state.callsByLink.get(String(primary.linkedId)) : null;
+        if (!number && liveCs && liveCs.number) number = liveCs.number;
+
+        // Asterisk's dead Manager-Originate path spawned channels whose exten
+        // was literally "s"; without this guard such garbage leaked into new
+        // Calls rows. Everything that cannot be tied to real digits AND to an
+        // existing click-to-call document is dropped.
+        const saneNumber = /^[\d*#+]{3,}$/.test(String(number || ""));
+        if (!saneNumber && !(liveCs && liveCs.docId)) return; // not attributable
 
         // ---- IMMUTABLE SNAPSHOT (taken synchronously, before ANY await) ----
         // Sibling channels of the same call hang up moments later and mutate
@@ -826,8 +841,17 @@ async function _finalizeChannel(ch, relatedExts) {
             ? await Calls.findOne({ source: "freepbx", pbxLinkedId: primary.linkedId, deleted: false })
             : null;
 
-        // Complete the click-to-call placeholder row instead of duplicating it
-        if (!saved && agentUser && primary.direction === "Outbound") {
+        // 1) Bind to the exact click-to-call document tracked on the live
+        //    lifecycle (works even when no agent extension was resolved).
+        if (!saved && liveCs && liveCs.docId) {
+            saved = await Calls.findById(liveCs.docId).catch(() => null);
+            if (saved && saved.deleted) saved = null;
+        }
+
+        // 2) Legacy heuristic for calls dialed straight on the phone: newest
+        //    "Ringing" placeholder of the same agent and number. Guarded so it
+        //    can never match on junk like "s".
+        if (!saved && agentUser && primary.direction === "Outbound" && saneNumber) {
             saved = await Calls.findOne({
                 source: "freepbx",
                 direction: "Outbound",
@@ -837,6 +861,9 @@ async function _finalizeChannel(ch, relatedExts) {
                 phoneNumber: new RegExp(`${number}$`),
             }).sort({ createdOn: -1 });
         }
+
+        // Never fabricate rows when nothing attributable was found
+        if (!saved && !saneNumber && !(liveCs && liveCs.docId)) return;
 
         const patch = {
             status: disposition,
@@ -893,23 +920,34 @@ async function _finalizeChannel(ch, relatedExts) {
 }
 
 // ---------------------------------------------------------------------- //
-// Click-to-call (AMI Originate)                                           //
+// Click-to-call (call-file delivery)                                      //
 // ---------------------------------------------------------------------- //
 
 /**
  * Ring the agent's extension; when they pick up, place the call to `number`.
- * Uses Local/<ext>@<dialContext> so ANY endpoint technology behind the
- * extension works (PJSIP phone, softphone, analog ATA port ...).
+ *
+ * WHY .call FILES AND NOT AMI ORIGINATE:
+ * Verified by wire capture on this PBX (2026-08-27): every Manager-API
+ * Originate (Channel/Context/Exten or Channel/Application, Local or direct
+ * PJSIP tech) sends INVITE and then cancels its own call ~16ms after the
+ * 100 Trying arrives - the phone flashes "Ringing" for an instant. The
+ * channel is even born at [context,'s',1], which produced bogus rows with
+ * phoneNumber 's'. pbx_spool (.call files dropped into
+ * /var/spool/asterisk/outgoing) performs the identical agent-first flow
+ * through a different execution path and rings reliably on this build.
+ *
+ * Delivery: scp to /tmp on the PBX, then atomically rename into the spool
+ * directory so asterisk never reads a partially written file.
  *
  * @returns the pre-created Calls document
  */
 async function originate({ agentUserId, agentExtension, number, lead_id, contact_id, subject }) {
-    if (!isConnected()) {
-        throw Object.assign(new Error("FreePBX integration is not connected"), { status: 503 });
-    }
-    const settings = state.settings;
+    const settings = await getSettings();
     const digits = _digitsOnly(number);
     if (!digits) throw Object.assign(new Error("A valid phone number is required"), { status: 400 });
+    if (!agentExtension) {
+        throw Object.assign(new Error("Your user has no PBX extension configured"), { status: 400 });
+    }
 
     // Pre-create the call so the UI gets an id immediately; events finalize it
     const doc = new Calls({
@@ -932,23 +970,96 @@ async function originate({ agentUserId, agentExtension, number, lead_id, contact
     _rememberOriginate(agentExtension, digits, doc._id);
 
     try {
-        await state.client.send({
-            Action: "Originate",
-            Channel: `Local/${agentExtension}@${settings.dialContext}`,
-            Context: settings.dialContext,
-            Exten: digits,
-            Priority: "1",
-            CallerID: `SureCRM <${digits}>`,
-            Timeout: String(Math.max(10, Number(settings.dialTimeout) || 45)),
-            Async: "true",
-            Variable: "__SURECRMCALLID=" + String(doc._id),
+        await _deployCallFile(settings, {
+            baseName: `surecrm-${String(doc._id)}-${Date.now()}.call`,
+            content: _buildCallFileContent(settings, { agentExtension, digits, docId: String(doc._id) }),
         });
     } catch (err) {
-        _forgetOriginate(agentExtension); // PBX rejected it - no ring leg will follow
-        await Calls.findByIdAndUpdate(doc._id, { status: "Failed", note: `AMI Originate failed: ${err.message}` });
+        _forgetOriginate(agentExtension); // PBX never received a ring leg
+        await Calls.findByIdAndUpdate(doc._id, { status: "Failed", note: `Call-file delivery failed: ${err.message}` });
         throw Object.assign(new Error(`PBX rejected the call: ${err.message}`), { status: 502 });
     }
     return doc;
+}
+
+/** Compose the pbx_spool call file. See Asterisk docs "callfiles". */
+function _buildCallFileContent(settings, { agentExtension, digits, docId }) {
+    const waitTime = Math.min(90, Math.max(10, Number(settings.dialTimeout) || 45));
+    return [
+        `Channel: Local/${agentExtension}@${settings.dialContext}/n`,
+        `CallerID: SureCRM <${digits}>`,
+        `WaitTime: ${waitTime}`,
+        `MaxRetries: 0`,
+        `RetryTime: 60`,
+        `Archive: yes`,
+        `Context: ${settings.dialContext}`,
+        `Extension: ${digits}`,
+        `Priority: 1`,
+        // Lets the event finalizer bind hangups back to this exact row.
+        `Set: __SURECRMCALLID=${docId}`,
+        "", // trailing newline
+    ].join("\n");
+}
+
+/**
+ * Copy a call file onto the PBX host (sshpass+scp; no extra npm deps).
+ * Step 1: scp content to /tmp/<name> on the PBX.
+ * Step 2: ssh mv it into the spool dir - atomic on the same filesystem,
+ *         so pbx_spool only ever picks up complete files.
+ * Throws with the underlying stderr message on any failure.
+ */
+async function _deployCallFile(settings, { baseName, content }) {
+    const host = String((settings && settings.host) || "").trim();
+    if (!host) throw new Error("FreePBX host is not configured");
+    const password = String(process.env.FREEPBX_SSH_PASSWORD || (settings && settings.sshPassword) || "");
+    if (!password) throw new Error("No SSH password configured (sshPassword or FREEPBX_SSH_PASSWORD)");
+    const port = Number(settings.sshPort) || 22;
+    const user = settings.sshUser || "root";
+    const spoolDir = settings.spoolDir || "/var/spool/asterisk/outgoing";
+    if (!/^[A-Za-z0-9._-]+$/.test(baseName)) throw new Error("Unsafe spool filename");
+    if (!/^[A-Za-z0-9/._-]+$/.test(spoolDir)) throw new Error("Unsafe spool directory");
+
+    const tmpLocal = path.join(os.tmpdir(), baseName);
+    const tmpRemote = `/tmp/${baseName}`;
+    const dstRemote = `${spoolDir}/${baseName}`;
+    const dest = `${user}@${host}`;
+
+    fs.writeFileSync(tmpLocal, content, { mode: 0o600 });
+    try {
+        await _runCmd(
+            "sshpass",
+            ["-e", "scp", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=8", `-P${port}`, tmpLocal, `${dest}:${tmpRemote}`],
+            password
+        );
+        await _runCmd(
+            "sshpass",
+            ["-e", "ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=8", `-p${port}`, dest,
+             // asterisk (non-root) must own the file to be able to utime/remove
+             // it once consumed; tolerate chown failures on non-standard setups.
+             `(chown asterisk:asterisk ${tmpRemote} || true) && chmod 644 ${tmpRemote} && mv ${tmpRemote} ${dstRemote}`],
+            password
+        );
+    } finally {
+        try { fs.unlinkSync(tmpLocal); } catch (e) { /* noop */ }
+    }
+}
+
+/** execFile wrapper: hard timeout, SSHPASS injected via env (secret-safe). */
+function _runCmd(cmd, args, sshPassword) {
+    return new Promise((resolve, reject) => {
+        execFile(
+            cmd,
+            args,
+            { timeout: 15000, env: { ...process.env, SSHPASS: sshPassword } },
+            (err, stdout, stderr) => {
+                if (err) {
+                    const detail = String(stderr || err.message).trim().split("\n").pop();
+                    return reject(new Error(detail || err.message));
+                }
+                resolve({ stdout });
+            }
+        );
+    });
 }
 
 // ---------------------------------------------------------------------- //

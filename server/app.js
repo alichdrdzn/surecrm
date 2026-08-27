@@ -1,13 +1,14 @@
 import express from "express";
-
 import dotenv from "dotenv";
-dotenv.config();
-
-import connectDB from "./db/connectdb.js";
-
+import bodyParser from "body-parser";
 import cors from "cors";
+import connectDB from "./db/connectdb.js";
+import serverRoutes from "./routes/serverRoutes.js";
+import freepbxService from "./services/freepbxService.js";
 import { crm } from "./utils/logger.js";
 import requestLogger from "./middlewares/requestLogger.js";
+
+dotenv.config();
 
 
 //Setup Express App
@@ -23,12 +24,8 @@ app.use(bodyParser.json());
 //HTTP access log
 app.use(requestLogger);
 
-//Load Routes
+// Load routes
 app.use("/", serverRoutes);
-
-import bodyParser from "body-parser";
-import serverRoutes from "./routes/serverRoutes.js";
-import freepbxService from "./services/freepbxService.js";
 
 // Get port from environment and store in Express.
 const port = process.env.PORT || "5000";

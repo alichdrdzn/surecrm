@@ -41,6 +41,19 @@ const FreepbxSettingsSchema = new mongoose.Schema({
     // e.g. "monitor/{date}-{time}-{uniqueId}.wav". Empty => "{uniqueId}.wav"
     recordingUrlPattern: { type: String, default: "" },
 
+    // ---- Click-to-call delivery ------------------------------------------ //
+    // Asterisk's Manager-API Originate collapses ~16ms after INVITE on some
+    // builds (verified by wire capture 2026-08-27), so ring legs are delivered
+    // as .call files into the spool directory instead (pbx_spool - proven
+    // stable on this PBX). Files are copied over SSH/SFTP.
+    // Host defaults to `host`; sshPassword may also come from env
+    // FREEPBX_SSH_PASSWORD (settings value wins when both are set).
+    sshPort: { type: Number, default: 22 },
+    sshUser: { type: String, default: "root" },
+    sshPassword: { type: String, default: "" },
+    // Remote directory monitored by asterisk (FreePBX default)
+    spoolDir: { type: String, default: "/var/spool/asterisk/outgoing" },
+
     deleted: {
         type: Boolean,
         default: false,

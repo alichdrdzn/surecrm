@@ -31,6 +31,8 @@ function _sanitize(doc) {
     const o = doc.toObject();
     o.hasSecret = Boolean(o.secret);
     delete o.secret;
+    o.hasSshPassword = Boolean(o.sshPassword || process.env.FREEPBX_SSH_PASSWORD);
+    delete o.sshPassword;
     return o;
 }
 
@@ -62,15 +64,19 @@ const saveSettings = async (req, res) => {
         const fields = [
             "enabled", "host", "username", "dialContext", "countryCodesToStrip",
             "nationalPrefixToStrip", "recordingUrlBase", "recordingUrlPattern",
+            "sshUser", "spoolDir",
         ];
         for (const f of fields) {
             if (b[f] !== undefined) doc[f] = b[f];
         }
         if (b.port !== undefined) doc.port = Number(b.port) || 5038;
+        if (b.sshPort !== undefined) doc.sshPort = Number(b.sshPort) || 22;
         if (b.dialTimeout !== undefined) doc.dialTimeout = Number(b.dialTimeout) || 45;
         if (b.matchDigits !== undefined) doc.matchDigits = Number(b.matchDigits) || 9;
         // Empty secret => keep existing one
         if (typeof b.secret === "string" && b.secret.length > 0) doc.secret = b.secret;
+        // Same "empty means keep" semantics for the SSH password
+        if (typeof b.sshPassword === "string" && b.sshPassword.length > 0) doc.sshPassword = b.sshPassword;
 
         doc.modifiedOn = new Date();
         await doc.save();
