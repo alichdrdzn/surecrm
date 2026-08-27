@@ -1,25 +1,273 @@
-# راهنمای جامعSURECRM - سیستم مدیریت ارتباط با مشتری
+# راهنمای جامع SURECRM - سیستم مدیریت ارتباط با مشتری
 
 ## فهرست مطالب
 
-1. [مقدمه](#مقدمه)
-2. [ورود به سیستم](#ورود-به-سیستم)
-3. [داشبورد اصلی](#داشبورد-اصلی)
-4. [مدیریت کاربران](#مدیریت-کاربران)
-5. [مدیریت سرنخ‌ها (Leads)](#مدیریت-سرنخها-leads)
-6. [مدیریت مخاطبین (Contacts)](#مدیریت-مخاطبین-contacts)
-7. [مدیریت بیمه‌نامه‌ها (Policies)](#مدیریت-بیمهنامهها-policies)
-8. [مدیریت اسناد (Documents)](#مدیریت-اسناد-documents)
-9. [تقویم (Calendar)](#تقویم-calendar)
-10. [مدیریت تماس‌ها (Calls)](#مدیریت-تماسها-calls)
-11. [تماس‌های زنده (Live Calls)](#تماسهای-زنده-live-calls)
-12. [ضبط‌های تماس (Call Recordings)](#ضبطهای-تماس-call-recordings)
-13. [مدیریت جلسات (Meetings)](#مدیریت-جلسات-meetings)
-14. [مدیریت ایمیل‌ها (Emails)](#مدیریت-ایمیلها-emails)
-15. [مدیریت وظایف (Tasks)](#مدیریت-وظایف-tasks)
-16. [قالب‌های ایمیل (Email Templates)](#قالبهای-ایمیل-email-templates)
-17. [تنظیمات FreePBX](#تنظیمات-freepbx)
-18. [کلیدهای میانبر](#کلیدهای-میانبر)
+1. [نصب و راه‌اندازی](#نصب-و-راه‌اندازی)
+   - [پیش‌نیازها](#پیش‌نیازها)
+   - [مراحل نصب](#مراحل-نصب)
+   - [نصب پکیج‌های سیستمی](#نصب-پکیج‌های-سیستمی)
+   - [تنظیم سرویس سیستم (Systemd)](#تنظیم-سرویس-سیستم-systemd-service)
+   - [تنظیم لاگ‌گردانی (Log Rotation)](#تنظیم-لاگ‌گردانی-log-rotation)
+2. [مقدمه](#مقدمه)
+3. [ورود به سیستم](#ورود-به-سیستم)
+4. [داشبورد اصلی](#داشبورد-اصلی)
+5. [مدیریت کاربران](#مدیریت-کاربران)
+6. [مدیریت سرنخ‌ها (Leads)](#مدیریت-سرنخها-leads)
+7. [مدیریت مخاطبین (Contacts)](#مدیریت-مخاطبین-contacts)
+8. [مدیریت بیمه‌نامه‌ها (Policies)](#مدیریت-بیمهنامهها-policies)
+9. [مدیریت اسناد (Documents)](#مدیریت-اسناد-documents)
+10. [تقویم (Calendar)](#تقویم-calendar)
+11. [مدیریت تماس‌ها (Calls)](#مدیریت-تماسها-calls)
+12. [تماس‌های زنده (Live Calls)](#تماسهای-زنده-live-calls)
+13. [ضبط‌های تماس (Call Recordings)](#ضبطهای-تماس-call-recordings)
+14. [مدیریت جلسات (Meetings)](#مدیریت-جلسات-meetings)
+15. [مدیریت ایمیل‌ها (Emails)](#مدیریت-ایمیلها-emails)
+16. [مدیریت وظایف (Tasks)](#مدیریت-وظایف-tasks)
+17. [قالب‌های ایمیل (Email Templates)](#قالبهای-ایمیل-email-templates)
+18. [تنظیمات FreePBX](#تنظیمات-freepbx)
+19. [کلیدهای میانبر](#کلیدهای-میانبر)
+
+---
+
+## نصب و راه‌اندازی
+
+### پیش‌نیازها
+
+قبل از شروع نصب، اطمینان حاصل کنید که سیستم شما دارای نرم‌افزارهای زیر باشد:
+
+| نرم‌افزار | حداقل نسخه | توضیحات |
+|-----------|-------------|---------|
+| [Node.js](https://nodejs.org/) | v18.x یا بالاتر | محیط اجرای JavaScript |
+| [npm](https://www.npmjs.com/) | v9.x یا بالاتر | مدیر بسته‌های Node.js (همراه Node.js نصب می‌شود) |
+| [MongoDB](https://www.mongodb.com/) | v5.x یا بالاتر | پایگاه داده NoSQL |
+| [Git](https://git-scm.com/) | آخرین نسخه | برای کلون کردن مخزن (اختیاری) |
+
+> **نکته:** اگر از macOS استفاده می‌کنید، توصیه می‌شود از [Homebrew](https://brew.sh/) برای نصب Node.js و MongoDB استفاده کنید.
+
+### مراحل نصب
+
+#### ۱. کلون کردن مخزن
+
+```bash
+git clone <repository-url>
+cd surecrm
+```
+
+#### ۲. نصب وابستگی‌های بک‌اند
+
+```bash
+cd server
+npm install
+```
+
+#### ۳. نصب وابستگی‌های فرانت‌اند
+
+```bash
+cd ../frontend
+npm install
+```
+
+#### ۴. تنظیم فایل محیط (Environment)
+
+یک فایل به نام `.env` در پوشه `server` ایجاد کنید و تنظیمات زیر را اضافه کنید:
+
+```env
+# پورت سرور
+PORT=5000
+
+# اتصال به MongoDB
+MONGO_URI=mongodb://localhost:27017/surecrm
+
+# کلید JWT (یک کلید تصادفی و امن انتخاب کنید)
+JWT_SECRET=your-secret-key-here
+
+# تنظیمات ایمیل (اختیاری)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+
+# آدرس سرور (برای CORS)
+CLIENT_URL=http://localhost:3000
+```
+
+#### ۵. اجرای سرور بک‌اند
+
+```bash
+cd server
+npm run dev
+```
+
+سرور بک‌اند به‌طور پیش‌فرض روی پورت `5000` اجرا می‌شود.
+
+#### ۶. اجرای فرانت‌اند
+
+در یک ترمینال جداگانه:
+
+```bash
+cd frontend
+npm start
+```
+
+فرانت‌اند به‌طور پیش‌فرض روی آدرس `http://localhost:3000` اجرا می‌شود.
+
+#### ۷. ساخت نسخه تولید (Production Build)
+
+برای ساخت نسخه آماده انتشار:
+
+```bash
+# ساخت بک‌اند
+cd server
+# (نیازی به بیلد نیست، سرور اجرا می‌شود)
+
+# ساخت فرانت‌اند
+cd ../frontend
+npm run build
+```
+
+فایل‌های بیلد شده در پوشه `frontend/build` قرار می‌گیرند.
+
+#### ۸. نصب پکیج‌های سیستمی
+
+برای اجرای SureCRM در محیط تولید، نیاز به نصب برخی پکیج‌های سیستمی دارید.
+
+##### نصب MongoDB
+
+```bash
+# Ubuntu/Debian
+wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+sudo apt update
+sudo apt install -y mongodb-org
+sudo systemctl enable mongod
+sudo systemctl start mongod
+```
+
+##### نصب Nginx
+
+```bash
+sudo apt update
+sudo apt install -y nginx
+```
+
+##### تنظیم فایل Nginx
+
+یک فایل کانفیگ در `/etc/nginx/sites-available/surecrm` ایجاد کنید:
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    root /home/chd/surecrm/frontend/build;
+    index index.html;
+
+    client_max_body_size 50M;
+
+    # Backend API routes
+    location ~ ^/(lead|contact|claim|note|call|meeting|email|task|user|policy|document|policydocument|emailtemplate)(/|$) {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+
+    # Uploaded files
+    location /uploads/ {
+        alias /home/chd/surecrm/server/uploads/;
+        expires 7d;
+        access_log off;
+    }
+
+    # React SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Static assets caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+        expires 30d;
+        access_log off;
+    }
+}
+```
+
+فعال‌سازی سایت:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/surecrm /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+> **نکته:** برای فعال‌سازی HTTPS، می‌توانید از [Let's Encrypt](https://letsencrypt.org/) و Certbot استفاده کنید.
+
+#### ۹. ایجاد سرویس سیستم (Systemd Service)
+
+برای اجرای خودکار سرور بک‌اند به‌عنوان یک سرویس سیستم، یک فایل سرویس systemd ایجاد کنید.
+
+فایل `/etc/systemd/system/surecrm.service` را با محتوای زیر ایجاد کنید:
+
+```ini
+[Unit]
+Description=SureCRM Backend Server
+After=network.target mongod.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/home/chd/surecrm/server
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+# Logging
+StandardOutput=append:/var/log/surecrm/out.log
+StandardError=append:/var/log/surecrm/error.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+فعال‌سازی و اجرای سرویس:
+
+```bash
+# ایجاد پوشه لاگ
+sudo mkdir -p /var/log/surecrm
+sudo touch /var/log/surecrm/out.log /var/log/surecrm/error.log
+sudo chown www-data:www-data /var/log/surecrm
+
+# ریلود systemd و فعال‌سازی سرویس
+sudo systemctl daemon-reload
+sudo systemctl enable surecrm
+sudo systemctl start surecrm
+
+# بررسی وضعیت سرویس
+sudo systemctl status surecrm
+```
+
+#### ۱۰. تنظیم لاگ‌گردانی (Log Rotation)
+
+برای مدیریت خودکار فایل‌های لاگ، یک فایل logrotate در `/etc/logrotate.d/surecrm` ایجاد کنید:
+
+```
+/var/log/surecrm/*.log {
+    daily
+    rotate 14
+    size 50M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    dateext
+}
+```
 
 ---
 
