@@ -10,6 +10,15 @@ const Document = new mongoose.Schema({
         default: 0
     },
     downloadLink: { type: String },
+    category: { type: String }, // 'contact' | 'lead' | 'general'
+    contact_id: {
+        type: mongoose.Schema.ObjectId,
+        ref: "Contacts",
+    },
+    lead_id: {
+        type: mongoose.Schema.ObjectId,
+        ref: "Leads",
+    },
     createdBy: {
         type: mongoose.Schema.ObjectId,
         ref: "User",

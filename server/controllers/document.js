@@ -4,11 +4,9 @@ import { crm } from "../utils/logger.js";
 const index = async (req, res) => {
     const query = req.query
     query.deleted = false;
-    // let result = await Document.find(query)
-    // let totalRecords = await Document.find(query).countDocuments()
     let allData = await Document.find(query).populate({
         path: 'createdBy',
-        match: { deleted: false } // Populate only if createBy.deleted is false
+        match: { deleted: false }
     }).exec()
 
     const result = allData.filter(item => item.createdBy !== null);
@@ -17,12 +15,40 @@ const index = async (req, res) => {
     res.send({ result, total_recodes: totalRecords })
 }
 
-const fileUpload = async (req, res) => {
+const getDocumentsByEntity = async (req, res) => {
+    try {
+        const { type, id } = req.params; // type: 'contact' or 'lead', id: entity id
+        const query = {
+            deleted: false,
+            category: type,
+            [`${type}_id`]: id
+        };
+        const documents = await Document.find(query).sort({ createdOn: -1 });
+        res.status(200).json({ result: documents, message: 'Documents fetched successfully' });
+    } catch (error) {
+        crm.error(error.message);
+        res.status(500).json({ error: error.message });
+    }
+}
 
+const fileUpload = async (req, res) => {
     const fileName = req.body.fileName
+    const category = req.body.category || 'general';
+    const contactId = req.body.contact_id || null;
+    const leadId = req.body.lead_id || null;
 
     try {
-        const file = await Document.create({ path: req.file.path, file: req.file.originalname, fileName: fileName, createdBy: req.body.createdBy });
+        const fileData = {
+            path: req.file.path,
+            file: req.file.originalname,
+            fileName: fileName,
+            category: category,
+            createdBy: req.body.createdBy
+        };
+        if (contactId) fileData.contact_id = contactId;
+        if (leadId) fileData.lead_id = leadId;
+
+        const file = await Document.create(fileData);
         res.status(200).json({ file, message: "File uploaded successfully" });
     } catch (error) {
         crm.error(error.message);
@@ -71,4 +97,4 @@ const deleteMany = async (req, res) => {
     }
 };
 
-export default { index, fileUpload, downloadFile, deleteData, deleteMany }
+export default { index, fileUpload, downloadFile, deleteData, deleteMany, getDocumentsByEntity }

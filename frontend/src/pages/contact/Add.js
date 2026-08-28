@@ -14,19 +14,28 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { useFormik } from "formik";
 import * as yup from "yup";
-import { FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup } from "@mui/material";
+import { FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, CircularProgress, IconButton } from "@mui/material";
+import { Close, GetApp, DeleteOutline } from "@mui/icons-material";
 import { toast } from "react-toastify";
-import { apipost } from "../../service/api";
+import { useEffect, useState } from "react";
+import { apipost, apiget, apidelete } from "../../service/api";
+import { constant } from "../../constant";
 // import { FiSave } from "react-icons/fi";
 // import { GiCancel } from "react-icons/gi";
 import Palette from "../../theme/palette";
 
 import { useTranslation } from '../../i18n';
 import JalaliDatePicker from '../../components/jalali/JalaliDatePicker';
+
 const Add = (props) => {
   const { t } = useTranslation();
   const { open, handleClose, setUserAction } = props
   const userid = localStorage.getItem('user_id');
+  const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [tempFileName, setTempFileName] = useState('');
+  const [tempFile, setTempFile] = useState(null);
+  const [docUploadLoading, setDocUploadLoading] = useState(false);
+  const [openDocDialog, setOpenDocDialog] = useState(false);
 
 
   // -----------  validationSchema
@@ -71,11 +80,44 @@ const Add = (props) => {
     setUserAction(result)
 
     if (result && result.status === 201) {
+      // Upload any temp files with the new contact ID
+      const newContactId = result.data.contact._id;
+      if (tempFile && newContactId) {
+        await uploadFileToContact(newContactId, tempFile, tempFileName);
+      }
       formik.resetForm();
       handleClose();
       toast.success(result.data.message)
     }
   }
+
+  // upload file to contact
+  const uploadFileToContact = async (contactId, fileObj, desc) => {
+    setDocUploadLoading(true);
+    const formData = new FormData();
+    formData.append('file', fileObj);
+    formData.append('fileName', desc || fileObj.name);
+    formData.append('createdBy', userid);
+    formData.append('category', 'contact');
+    formData.append('contact_id', contactId);
+    try {
+      await apipost('document/upload', formData);
+      setTempFile(null);
+      setTempFileName('');
+      setUploadedDocs([]);
+    } catch (e) {
+      console.error('File upload failed', e);
+    }
+    setDocUploadLoading(false);
+  };
+
+  const handleTempFileUpload = () => {
+    if (!tempFile) return;
+    setOpenDocDialog(false);
+    // We'll upload after contact is created, just keep the file in state
+    uploadFileToContact('temp', tempFile, tempFileName);
+    setOpenDocDialog(false);
+  };
 
   // formik
   const formik = useFormik({
@@ -405,6 +447,46 @@ const Add = (props) => {
                 />
               </Grid>
             </Grid>
+
+            {/* File Upload Section */}
+            <Typography style={{ marginBottom: "15px" }} variant="h6" mt={3}>{t('Attach Files')}</Typography>
+            <Box mb={2}>
+              <Button variant="outlined" component="label" startIcon={<GetApp />}>
+                {t('Upload File')}
+                <input type="file" hidden onChange={(e) => {
+                  if (e.target.files[0]) {
+                    setTempFile(e.target.files[0]);
+                    setTempFileName(e.target.files[0].name);
+                    setOpenDocDialog(true);
+                  }
+                }} />
+              </Button>
+            </Box>
+
+            {/* Upload Dialog */}
+            <Dialog open={openDocDialog} onClose={() => setOpenDocDialog(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>{t('Upload Document')}</DialogTitle>
+              <Close onClick={() => setOpenDocDialog(false)} sx={{ position: 'absolute', right: 8, top: 8, cursor: 'pointer' }} />
+              <DialogContent>
+                <Box sx={{ pt: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>{t('File Description')}</Typography>
+                  <TextField
+                    fullWidth size="small"
+                    value={tempFileName}
+                    onChange={(e) => setTempFileName(e.target.value)}
+                    placeholder="e.g., Government ID, Passport, etc."
+                    sx={{ mb: 2 }}
+                  />
+                  <Typography variant="body2">{t('File Selected:')} {tempFile?.name}</Typography>
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setOpenDocDialog(false)} color="error">{t('Cancel')}</Button>
+                <Button onClick={handleTempFileUpload} variant="contained" disabled={docUploadLoading || !tempFile}>
+                  {docUploadLoading ? <CircularProgress size={20} /> : t('Upload')}
+                </Button>
+              </DialogActions>
+            </Dialog>
           </form>
         </DialogContent>
         <DialogActions>

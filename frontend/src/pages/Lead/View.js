@@ -27,6 +27,7 @@ import Other from './Other';
 import { apidelete, apiget } from '../../service/api';
 // eslint-disable-next-line no-unused-vars
 import { CustomTabPanel, a11yProps } from '../../components/CustomTabPanel';
+import DocumentManagement from '../../components/documents/DocumentManagement';
 
 import { useTranslation } from '../../i18n';
 const View = () => {
@@ -218,6 +219,9 @@ const View = () => {
                 <Card sx={{ marginTop: "20px" }}>
                     <Emails toggleVisibilityEmail={toggleVisibilityEmail} isVisibleEmail={isVisibleEmail} setUserAction={setUserAction} rows={leadData?.emails} _id={params.id} data={leadData} />
                 </Card>
+
+                {/* Document Management */}
+                <DocumentManagement type="lead" entityId={params.id} onRefresh={userAction} />
 
             </Container>
 

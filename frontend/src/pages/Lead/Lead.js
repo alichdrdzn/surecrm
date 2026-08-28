@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { DataGrid, GridToolbar, GridToolbarContainer } from '@mui/x-data-grid';
 import { DeleteOutline } from '@mui/icons-material';
 import EditIcon from '@mui/icons-material/Edit';
+import GetAppIcon from '@mui/icons-material/GetApp';
 import Iconify from '../../components/iconify';
 // sections
 // mock
@@ -18,9 +19,11 @@ import DeleteModel from '../../components/Deletemodle'
 import TableStyle from '../../components/TableStyle'
 import EditModel from './Edit'
 import CallButton from '../../components/freepbx/CallButton';
+import ImportLeadCSV from '../../components/csv-import/ImportLeadCSV';
 // ----------------------------------------------------------------------
 
 import { useTranslation } from '../../i18n';
+
 function CustomToolbar({ selectedRowIds, fetchdata }) {
   const { t } = useTranslation();
   const [opendelete, setOpendelete] = useState(false);
@@ -60,6 +63,7 @@ const Lead = () => {
   const [id, setId] = useState('')
   const [openAdd, setOpenAdd] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [openImport, setOpenImport] = useState(false);
   const navigate = useNavigate()
 
   const userid = localStorage.getItem('user_id');
@@ -162,6 +166,7 @@ const Lead = () => {
         <Stack direction="row" alignItems="center" mb={5} justifyContent={"space-between"}>
           <Typography variant="h4" >{t('Lead')}</Typography>
           <Stack direction="row" alignItems="center" justifyContent={"flex-end"} spacing={2}>
+            <Button variant="outlined" startIcon={<GetAppIcon />} onClick={() => setOpenImport(true)}>{t('Import CSV')}</Button>
             <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenAdd}>{t('New Lead')}</Button>
           </Stack>
         </Stack>
@@ -181,6 +186,9 @@ const Lead = () => {
           </Box>
         </TableStyle>
       </Container >
+
+      {/* Import CSV Dialog */}
+      <ImportLeadCSV open={openImport} handleClose={() => setOpenImport(false)} fetchdata={fetchdata} />
     </>
   );
 }

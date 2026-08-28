@@ -22,6 +22,7 @@ import Moreinformation from './Moreinformation';
 import Other from './Other';
 import Policy from './Policy'
 import { CustomTabPanel, a11yProps } from '../../components/CustomTabPanel';
+import DocumentManagement from '../../components/documents/DocumentManagement';
 
 import { useTranslation } from '../../i18n';
 const View = () => {
@@ -227,6 +228,10 @@ const View = () => {
                 <Card sx={{ marginTop: "20px" }}>
                     <Emails toggleVisibilityEmail={toggleVisibilityEmail} isVisibleEmail={isVisibleEmail} rows={contactData?.emails} setUserAction={setUserAction} _id={params.id} data={contactData} />
                 </Card>
+
+                {/* Document Management */}
+                <DocumentManagement type="contact" entityId={params.id} onRefresh={userAction} />
+
             </Container>
 
 

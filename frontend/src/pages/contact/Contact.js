@@ -10,12 +10,13 @@ import {
     Typography,
     Box,
 } from '@mui/material';
-import { useTranslation } from '../../i18n';
-// components
 import { useNavigate } from 'react-router-dom';
 import { DataGrid, GridToolbar, GridToolbarContainer } from '@mui/x-data-grid';
 import { DeleteOutline } from '@mui/icons-material';
 import EditIcon from '@mui/icons-material/Edit';
+import GetAppIcon from '@mui/icons-material/GetApp';
+import { useTranslation } from '../../i18n';
+// components
 import Iconify from '../../components/iconify';
 // sections
 // mock
@@ -25,6 +26,7 @@ import { apiget, deleteManyApi } from '../../service/api';
 import DeleteModel from '../../components/Deletemodle'
 import EditContact from './Edit'
 import CallButton from '../../components/freepbx/CallButton';
+import ImportCSV from '../../components/csv-import/ImportContactCSV';
 
 // ----------------------------------------------------------------------
 
@@ -65,6 +67,7 @@ const Contact = () => {
     const [selectedRowIds, setSelectedRowIds] = useState([]);
     const [openEdit, setOpenEdit] = useState(false);
     const [openAdd, setOpenAdd] = useState(false);
+    const [openImport, setOpenImport] = useState(false);
     const [id, setId] = useState('');
     const navigate = useNavigate()
 
@@ -165,7 +168,10 @@ const Contact = () => {
                 <TableStyle>
                     <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
                         <Typography variant="h4">{t('Contact')}</Typography>
-                        <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenAdd}>{t('New Contact')}</Button>
+                        <Stack direction="row" spacing={1}>
+                            <Button variant="outlined" startIcon={<GetAppIcon />} onClick={() => setOpenImport(true)}>{t('Import CSV')}</Button>
+                            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenAdd}>{t('New Contact')}</Button>
+                        </Stack>
                     </Stack>
                     <Box width="100%">
                         <Card style={{ height: "600px", paddingTop: "15px" }}>
@@ -182,6 +188,9 @@ const Contact = () => {
                     </Box>
                 </TableStyle>
             </Container>
+
+            {/* Import CSV Dialog */}
+            <ImportCSV open={openImport} handleClose={() => setOpenImport(false)} fetchdata={fetchdata} />
         </>
     );
 }

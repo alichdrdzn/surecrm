@@ -11,6 +11,6 @@ router.put('/edit/:id', auth, Lead.edit)
 router.get('/view/:id', auth, Lead.view)
 router.delete('/delete/:id', auth, Lead.deleteData)
 router.post('/deletemany', auth, Lead.deleteMany)
-
+router.post('/import-csv', auth, upload.single('csvFile'), Lead.importCSV)
 
 export default router

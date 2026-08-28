@@ -10,6 +10,13 @@ import claim from '../model/claim.js';
 import Lead from '../model/Lead.js';
 import Emails from '../model/emails.js'
 import { crm } from "../utils/logger.js";
+import csvParser from 'csv-parser';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const index = async (req, res) => {
     const query = req.query
@@ -279,5 +286,116 @@ const deleteMany = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 };
+// Map CSV headers to Contact model fields
+const contactFieldMapping = {
+    'first_name': 'firstName',
+    'firstname': 'firstName',
+    'first name': 'firstName',
+    'last_name': 'lastName',
+    'lastname': 'lastName',
+    'last name': 'lastName',
+    'date_of_birth': 'dateOfBirth',
+    'dateofbirth': 'dateOfBirth',
+    'date of birth': 'dateOfBirth',
+    'gender': 'gender',
+    'phone_number': 'phoneNumber',
+    'phonenumber': 'phoneNumber',
+    'phone number': 'phoneNumber',
+    'email_address': 'emailAddress',
+    'emailaddress': 'emailAddress',
+    'email address': 'emailAddress',
+    'email': 'emailAddress',
+    'address': 'address',
+    'alternate_phone_number': 'alternatePhoneNumber',
+    'alternatephonenumber': 'alternatePhoneNumber',
+    'alternate phone number': 'alternatePhoneNumber',
+    'additional_email_address': 'additionalEmailAddress',
+    'additionalemailaddress': 'additionalEmailAddress',
+    'additional email address': 'additionalEmailAddress',
+    'instagram_profile': 'instagramProfile',
+    'instagramprofile': 'instagramProfile',
+    'instagram profile': 'instagramProfile',
+    'twitter_profile': 'twitterProfile',
+    'twitterprofile': 'twitterProfile',
+    'twitter profile': 'twitterProfile',
+    'preferred_contact_method': 'preferredContactMethod',
+    'preferredcontactmethod': 'preferredContactMethod',
+    'preferred contact method': 'preferredContactMethod',
+    'referral_source': 'referralSource',
+    'referralsource': 'referralSource',
+    'referral source': 'referralSource',
+    'referral_contact_name': 'referralContactName',
+    'referralcontactname': 'referralContactName',
+    'referral contact name': 'referralContactName',
+    'relationship_to_referrer': 'relationshipToReferrer',
+    'relationshiptoreferrer': 'relationshipToReferrer',
+    'relationship to referrer': 'relationshipToReferrer',
+    'preferences_for_marketing_communications': 'preferencesForMarketingCommunications',
+    'preferencesformarketingcommunications': 'preferencesForMarketingCommunications',
+    'preferred_language': 'preferredLanguage',
+    'preferredlanguage': 'preferredLanguage',
+    'preferred language': 'preferredLanguage',
+};
 
-export default { index, add, edit, view, deleteData, deleteMany }
+const importCSV = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const results = [];
+    let skipped = 0;
+    const createdBy = req.body.createdBy || req.user?._id || '0';
+
+    try {
+        await new Promise((resolve, reject) => {
+            fs.createReadStream(req.file.path)
+                .pipe(csvParser({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
+                .on('data', (row) => {
+                    const contactData = {};
+                    let hasValidData = false;
+
+                    for (const [csvKey, value] of Object.entries(row)) {
+                        const mappedKey = contactFieldMapping[csvKey.toLowerCase()];
+                        if (mappedKey && value && value.trim()) {
+                            contactData[mappedKey] = value.trim();
+                            hasValidData = true;
+                        }
+                    }
+
+                    if (hasValidData) {
+                        contactData.createdBy = createdBy;
+                        contactData.deleted = false;
+                        results.push(contactData);
+                    } else {
+                        skipped++;
+                    }
+                })
+                .on('end', () => resolve())
+                .on('error', (error) => reject(error));
+        });
+
+        if (results.length > 0) {
+            await Contact.insertMany(results, { ordered: false }).catch((err) => {
+                crm.error('Some contacts failed to insert:', err.message);
+            });
+        }
+
+        fs.unlink(req.file.path, (err) => {
+            if (err) crm.error('Error deleting temp file:', err);
+        });
+
+        res.status(200).json({
+            message: `Import completed. ${results.length} contacts created, ${skipped} rows skipped.`,
+            imported: results.length,
+            skipped: skipped,
+        });
+    } catch (error) {
+        crm.error('CSV import error:', error);
+        if (req.file && req.file.path) {
+            fs.unlink(req.file.path, () => {});
+        }
+        res.status(500).json({ message: 'Failed to import CSV: ' + error.message });
+    }
+};
+
+export default { index, add, edit, view, deleteData, deleteMany, importCSV };

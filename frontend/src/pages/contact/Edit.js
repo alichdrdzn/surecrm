@@ -15,20 +15,28 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { useFormik } from "formik";
 import * as yup from "yup";
-import { FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup } from "@mui/material";
+import { FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup, Box, CircularProgress, IconButton, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper } from "@mui/material";
+import { Close, GetApp, DeleteOutline } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import { apiget, apiput } from "../../service/api";
+import { apiget, apiput, apipost, apidelete } from "../../service/api";
+import { constant } from "../../constant";
 import Palette from "../../theme/palette";
 
 
 import { useTranslation } from '../../i18n';
 import JalaliDatePicker from '../../components/jalali/JalaliDatePicker';
+
 const Edit = (props) => {
   const { t } = useTranslation();
 
   const { open, handleClose, id, fetchContact } = props
   const [contactData, setContactData] = useState({});
+  const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [tempFileName, setTempFileName] = useState('');
+  const [tempFile, setTempFile] = useState(null);
+  const [docUploadLoading, setDocUploadLoading] = useState(false);
+  const [openDocDialog, setOpenDocDialog] = useState(false);
 
 
 
@@ -86,9 +94,54 @@ const Edit = (props) => {
     }
   }
 
+  // fetch documents for this contact
+  const fetchDocuments = async () => {
+    if (!id) return;
+    try {
+      const result = await apiget(`document/by-entity/contact/${id}`);
+      if (result && result.status === 200) {
+        setUploadedDocs(result.data?.result || []);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
+  };
+
   useEffect(() => {
     fetchdata();
-  }, [open])
+    fetchDocuments();
+  }, [open, id])
+
+  // upload file to contact
+  const handleFileUpload = async () => {
+    if (!tempFile) return;
+    setDocUploadLoading(true);
+    const formData = new FormData();
+    formData.append('file', tempFile);
+    formData.append('fileName', tempFileName || tempFile.name);
+    formData.append('createdBy', localStorage.getItem('user_id'));
+    formData.append('category', 'contact');
+    formData.append('contact_id', id);
+    try {
+      await apipost('document/upload', formData);
+      setTempFile(null);
+      setTempFileName('');
+      setOpenDocDialog(false);
+      fetchDocuments();
+    } catch (e) {
+      console.error('File upload failed', e);
+    }
+    setDocUploadLoading(false);
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+      await apidelete(`document/delete/${docId}`);
+      fetchDocuments();
+    } catch (e) {
+      console.error('Delete failed', e);
+    }
+  };
 
 
   // formik
@@ -449,6 +502,77 @@ const Edit = (props) => {
                 />
               </Grid>
             </Grid>
+
+            {/* File Upload Section */}
+            <Typography style={{ marginBottom: "15px" }} variant="h6" mt={3}>{t('Attached Documents')}</Typography>
+            <Box mb={2}>
+              <Button variant="outlined" component="label" startIcon={<GetApp />}>
+                {t('Upload File')}
+                <input type="file" hidden onChange={(e) => {
+                  if (e.target.files[0]) {
+                    setTempFile(e.target.files[0]);
+                    setTempFileName(e.target.files[0].name);
+                    setOpenDocDialog(true);
+                  }
+                }} />
+              </Button>
+            </Box>
+
+            {/* Existing Documents Table */}
+            {uploadedDocs.length > 0 && (
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('File Name')}</TableCell>
+                      <TableCell>{t('Uploaded')}</TableCell>
+                      <TableCell align="right">{t('Actions')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {uploadedDocs.map((doc) => (
+                      <TableRow key={doc._id}>
+                        <TableCell>{doc.fileName || doc.file}</TableCell>
+                        <TableCell>{new Date(doc.createdOn).toLocaleDateString()}</TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" href={`${constant.baseUrl}document/file/${doc._id}`} target="_blank" color="primary">
+                            <GetApp fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteDocument(doc._id)} color="error">
+                            <DeleteOutline fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {/* Upload Dialog */}
+            <Dialog open={openDocDialog} onClose={() => setOpenDocDialog(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>{t('Upload Document')}</DialogTitle>
+              <Close onClick={() => setOpenDocDialog(false)} sx={{ position: 'absolute', right: 8, top: 8, cursor: 'pointer' }} />
+              <DialogContent>
+                <Box sx={{ pt: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>{t('File Description')}</Typography>
+                  <TextField
+                    fullWidth size="small"
+                    value={tempFileName}
+                    onChange={(e) => setTempFileName(e.target.value)}
+                    placeholder="e.g., Government ID, Passport, etc."
+                    sx={{ mb: 2 }}
+                  />
+                  <Typography variant="body2">{t('File Selected:')} {tempFile?.name}</Typography>
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setOpenDocDialog(false)} color="error">{t('Cancel')}</Button>
+                <Button onClick={handleFileUpload} variant="contained" disabled={docUploadLoading || !tempFile}>
+                  {docUploadLoading ? <CircularProgress size={20} /> : t('Upload')}
+                </Button>
+              </DialogActions>
+            </Dialog>
           </form>
         </DialogContent>
         <DialogActions>
